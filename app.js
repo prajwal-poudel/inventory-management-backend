@@ -2,6 +2,8 @@ const express = require('express');
 const morgan = require('morgan')
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const swaggerUi = require('swagger-ui-express');
+const swaggerDocument = require('./swagger-output.json');
 
 
 // Import routes
@@ -14,7 +16,9 @@ const deliveryRoutes = require('./routes/deliveryRoutes');
 const driverRoutes = require('./routes/driverRoutes');
 const stockRoutes = require('./routes/stockRoutes');
 const inventoryRoutes = require('./routes/inventoryRoutes');
-// const orderRoutes = require('./routes/orderRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const unitRoutes = require('./routes/unitRoutes');
+const productUnitsRoutes = require('./routes/productUnitsRoutes');
 
 const app = express()
 
@@ -23,6 +27,12 @@ app.use(bodyParser.json({limit:"50mb"}))
 app.use(bodyParser.urlencoded({extended:true}))
 app.use(morgan('dev'))
 app.use(cors());
+
+// Swagger Documentation
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Inventory Management API Documentation'
+}));
 
 
 
@@ -43,7 +53,9 @@ app.get("/", (req, res) => {
             customers: "/api/customers",
             orders: "/api/orders",
             drivers: "/api/drivers",
-            deliveries: "/api/deliveries"
+            deliveries: "/api/deliveries",
+            units: "/api/units",
+            productUnits: "/api/product-units"
         }
     });
 });
@@ -56,9 +68,11 @@ app.use('/api/products', productRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/stock', stockRoutes);
 app.use('/api/customers', customerRoutes);
-// app.use('/api/orders', orderRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/deliveries', deliveryRoutes);
+app.use('/api/units', unitRoutes);
+app.use('/api/product-units', productUnitsRoutes);
 
 // 404 handler for unmatched routes for API routes only
 app.use( (req, res) => {

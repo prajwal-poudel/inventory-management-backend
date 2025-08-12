@@ -17,23 +17,35 @@ const {
 
 // Public routes (authentication required but accessible to all authenticated users)
 // GET /api/categories - Get all categories
-router.get('/', authenticateToken, getAllCategories);
+router.get('/',
+  // #swagger.tags = ['Categories']
+  authenticateToken, getAllCategories);
 
 // GET /api/categories/:id - Get category by ID
-router.get('/:id', authenticateToken, getCategoryById);
+router.get('/:id',
+  // #swagger.tags = ['Categories']
+  authenticateToken, getCategoryById);
 
 // GET /api/categories/stats/product-count - Get categories with product count
-router.get('/stats/product-count', authenticateToken, getCategoriesWithProductCount);
+router.get('/stats/product-count',
+  // #swagger.tags = ['Categories']
+  authenticateToken, getCategoriesWithProductCount);
 
 // Admin only routes
 // POST /api/categories - Create new category (admin only)
-router.post('/', authenticateToken, requireAdmin, createCategory);
+router.post('/',
+  // #swagger.tags = ['Categories']
+  authenticateToken, requireAdmin, createCategory);
 
 // PUT /api/categories/:id - Update category (admin only)
-router.put('/:id', authenticateToken, requireAdmin, updateCategory);
+router.put('/:id',
+  // #swagger.tags = ['Categories']
+  authenticateToken, requireAdmin, updateCategory);
 
 // Super admin only routes
 // DELETE /api/categories/:id - Delete category (super admin only)
-router.delete('/:id', authenticateToken, requireSuperAdmin, deleteCategory);
+router.delete('/:id',
+  // #swagger.tags = ['Categories']
+  authenticateToken, requireSuperAdmin, deleteCategory);
 
 module.exports = router;

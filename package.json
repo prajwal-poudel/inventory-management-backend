@@ -13,7 +13,8 @@
     "db:migrate:status": "sequelize-cli db:migrate:status",
     "db:seed": "sequelize-cli db:seed:all",
     "db:seed:undo": "sequelize-cli db:seed:undo:all",
-    "db:setup": "node setup-database.js"
+    "db:setup": "node setup-database.js",
+    "swagger": "node swagger.js"
   },
   "keywords": [],
   "author": "",
@@ -29,7 +30,9 @@
     "morgan": "^1.10.1",
     "mysql2": "^3.14.3",
     "nodemon": "^3.1.10",
-    "sequelize": "^6.37.7"
+    "sequelize": "^6.37.7",
+    "swagger-autogen": "^2.23.7",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "sequelize-cli": "^6.6.3"

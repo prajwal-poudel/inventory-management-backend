@@ -1,4 +1,4 @@
-const { Product, Category, Stock } = require('../models');
+const { Product, Category, Stock, ProductUnits, Unit } = require('../models');
 
 // Get all products
 const getAllProducts = async (req, res) => {
@@ -13,7 +13,18 @@ const getAllProducts = async (req, res) => {
         {
           model: Stock,
           as: 'stock',
-          attributes: ['id', 'stockKg', 'stockBori']
+          attributes: ['id', 'stockQuantity', 'unit']
+        },
+        {
+          model: ProductUnits,
+          as: 'productUnits',
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -49,7 +60,18 @@ const getProductById = async (req, res) => {
         {
           model: Stock,
           as: 'stock',
-          attributes: ['id', 'stockKg', 'stockBori']
+          attributes: ['id', 'stockQuantity', 'unit']
+        },
+        {
+          model: ProductUnits,
+          as: 'productUnits',
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ]
     });
@@ -79,13 +101,13 @@ const getProductById = async (req, res) => {
 // Create new product
 const createProduct = async (req, res) => {
   try {
-    const { productName, ratePerKg, ratePerBori, description, category_id } = req.body;
+    const { productName, description, category_id, units } = req.body;
     
     // Validate required fields
-    if (!productName || !ratePerKg || !ratePerBori || !category_id) {
+    if (!productName || !category_id) {
       return res.status(400).json({
         success: false,
-        message: 'Product name, rate per kg, rate per bori, and category ID are required'
+        message: 'Product name and category ID are required'
       });
     }
     
@@ -101,11 +123,53 @@ const createProduct = async (req, res) => {
     // Create product
     const newProduct = await Product.create({
       productName,
-      ratePerKg,
-      ratePerBori,
       description,
       category_id
     });
+    
+    // If units are provided, create product units
+    if (units && Array.isArray(units) && units.length > 0) {
+      // Validate units data
+      for (const unit of units) {
+        if (!unit.unit_id || unit.rate === undefined) {
+          return res.status(400).json({
+            success: false,
+            message: 'Each unit must have unit_id and rate'
+          });
+        }
+        
+        if (unit.rate < 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'All rates must be positive numbers'
+          });
+        }
+      }
+      
+      // Check if all units exist
+      const unitIds = units.map(u => u.unit_id);
+      const existingUnits = await Unit.findAll({
+        where: { id: { [require('sequelize').Op.in]: unitIds } }
+      });
+      
+      if (existingUnits.length !== unitIds.length) {
+        // Delete the created product if units validation fails
+        await newProduct.destroy();
+        return res.status(404).json({
+          success: false,
+          message: 'One or more units not found'
+        });
+      }
+      
+      // Create product units
+      const productUnitsData = units.map(unit => ({
+        product_id: newProduct.id,
+        unit_id: unit.unit_id,
+        rate: unit.rate
+      }));
+      
+      await ProductUnits.bulkCreate(productUnitsData);
+    }
     
     // Fetch the created product with associations
     const productWithAssociations = await Product.findByPk(newProduct.id, {
@@ -114,6 +178,17 @@ const createProduct = async (req, res) => {
           model: Category,
           as: 'category',
           attributes: ['id', 'name', 'categoryCol']
+        },
+        {
+          model: ProductUnits,
+          as: 'productUnits',
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ]
     });
@@ -137,7 +212,7 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { productName, ratePerKg, ratePerBori, description, category_id } = req.body;
+    const { productName, description, category_id } = req.body;
     
     // Check if product exists
     const product = await Product.findByPk(id);
@@ -162,8 +237,6 @@ const updateProduct = async (req, res) => {
     // Prepare update data
     const updateData = {};
     if (productName) updateData.productName = productName;
-    if (ratePerKg) updateData.ratePerKg = ratePerKg;
-    if (ratePerBori) updateData.ratePerBori = ratePerBori;
     if (description !== undefined) updateData.description = description;
     if (category_id) updateData.category_id = category_id;
     
@@ -181,7 +254,18 @@ const updateProduct = async (req, res) => {
         {
           model: Stock,
           as: 'stock',
-          attributes: ['id', 'stockKg', 'stockBori']
+          attributes: ['id', 'stockQuantity', 'unit']
+        },
+        {
+          model: ProductUnits,
+          as: 'productUnits',
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ]
     });
@@ -257,7 +341,18 @@ const getProductsByCategory = async (req, res) => {
         {
           model: Stock,
           as: 'stock',
-          attributes: ['id', 'stockKg', 'stockBori']
+          attributes: ['id', 'stockQuantity', 'unit']
+        },
+        {
+          model: ProductUnits,
+          as: 'productUnits',
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]

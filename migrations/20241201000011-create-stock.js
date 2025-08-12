@@ -1,24 +1,28 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('stock', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
-      stockKg: {
+      stockQuantity: {
         type: Sequelize.DOUBLE,
         allowNull: false,
         defaultValue: 0
       },
-      stockBori: {
-        type: Sequelize.DOUBLE,
+      unit_id: {
+        type: Sequelize.INTEGER,
         allowNull: false,
-        defaultValue: 0
+        references: {
+          model: 'units',
+          key: 'id'
+        },
+        onUpdate: 'CASCADE',
+        onDelete: 'RESTRICT'
       },
       product_id: {
         type: Sequelize.INTEGER,
@@ -41,30 +45,34 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add indexes for foreign keys
+    // Add foreign key indexes
+    await queryInterface.addIndex('stock', ['unit_id'], {
+      name: 'stock_unit_id_idx'
+    });
+
     await queryInterface.addIndex('stock', ['product_id'], {
       name: 'stock_product_id_idx'
     });
-    
+
     await queryInterface.addIndex('stock', ['inventory_id'], {
       name: 'stock_inventory_id_idx'
     });
 
-    // Add unique constraint for product-inventory combination
-    await queryInterface.addIndex('stock', ['product_id', 'inventory_id'], {
+    // Add composite unique index to prevent duplicate stock entries for same product-inventory-unit combination
+    await queryInterface.addIndex('stock', ['product_id', 'inventory_id', 'unit_id'], {
       unique: true,
-      name: 'stock_product_inventory_unique'
+      name: 'stock_product_inventory_unit_unique'
     });
   },
 

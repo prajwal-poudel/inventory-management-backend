@@ -1,58 +1,63 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('manages', {
+    await queryInterface.createTable('delivery', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
-      user_id: {
+      order_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'user',
+          model: 'order',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      inventory_id: {
+      driver_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'inventory',
+          model: 'driver',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'CASCADE'
+        onDelete: 'RESTRICT'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add indexes for foreign keys
-    await queryInterface.addIndex('manages', ['user_id'], {
-      name: 'manages_user_id_idx'
+    // Add foreign key indexes
+    await queryInterface.addIndex('delivery', ['order_id'], {
+      name: 'delivery_order_id_idx'
     });
-    
-    await queryInterface.addIndex('manages', ['inventory_id'], {
-      name: 'manages_inventory_id_idx'
+
+    await queryInterface.addIndex('delivery', ['driver_id'], {
+      name: 'delivery_driver_id_idx'
+    });
+
+    // Add unique constraint on order_id to ensure one delivery per order
+    await queryInterface.addIndex('delivery', ['order_id'], {
+      unique: true,
+      name: 'delivery_order_id_unique'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('manages');
+    await queryInterface.dropTable('delivery');
   }
 };

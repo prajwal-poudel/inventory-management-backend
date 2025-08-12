@@ -1,64 +1,63 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('delivery', {
+    await queryInterface.createTable('manages', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
-      order_id: {
+      user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'order',
+          model: 'user',
           key: 'id'
         },
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE'
       },
-      driver_id: {
+      inventory_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
-          model: 'driver',
+          model: 'inventory',
           key: 'id'
         },
         onUpdate: 'CASCADE',
-        onDelete: 'RESTRICT'
+        onDelete: 'CASCADE'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add indexes for foreign keys
-    await queryInterface.addIndex('delivery', ['order_id'], {
-      name: 'delivery_order_id_idx'
-    });
-    
-    await queryInterface.addIndex('delivery', ['driver_id'], {
-      name: 'delivery_driver_id_idx'
+    // Add foreign key indexes
+    await queryInterface.addIndex('manages', ['user_id'], {
+      name: 'manages_user_id_idx'
     });
 
-    // Add unique constraint for order_id (one delivery per order)
-    await queryInterface.addIndex('delivery', ['order_id'], {
+    await queryInterface.addIndex('manages', ['inventory_id'], {
+      name: 'manages_inventory_id_idx'
+    });
+
+    // Add composite unique index to prevent duplicate user-inventory relationships
+    await queryInterface.addIndex('manages', ['user_id', 'inventory_id'], {
       unique: true,
-      name: 'delivery_order_id_unique'
+      name: 'manages_user_inventory_unique'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('delivery');
+    await queryInterface.dropTable('manages');
   }
 };

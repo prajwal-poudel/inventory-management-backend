@@ -1,21 +1,38 @@
-const { Stock, Product, Inventory } = require('../models');
+const { Stock, Product, Inventory, ProductUnits, Unit } = require('../models');
+const { Op } = require('sequelize');
+
+// Helper function to get standard includes for stock queries
+const getStockIncludes = () => [
+  {
+    model: Product,
+    as: 'product',
+    attributes: ['id', 'productName', 'description'],
+    include: [
+      {
+        model: ProductUnits,
+        as: 'productUnits',
+        include: [
+          {
+            model: Unit,
+            as: 'unit',
+            attributes: ['id', 'name']
+          }
+        ]
+      }
+    ]
+  },
+  {
+    model: Inventory,
+    as: 'inventory',
+    attributes: ['id', 'inventoryName', 'address', 'contactNumber']
+  }
+];
 
 // Get all stock records
 const getAllStock = async (req, res) => {
   try {
     const stock = await Stock.findAll({
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ],
+      include: getStockIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
@@ -40,18 +57,7 @@ const getStockById = async (req, res) => {
     const { id } = req.params;
     
     const stock = await Stock.findByPk(id, {
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori', 'description']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ]
+      include: getStockIncludes()
     });
     
     if (!stock) {
@@ -79,21 +85,29 @@ const getStockById = async (req, res) => {
 // Create new stock record
 const createStock = async (req, res) => {
   try {
-    const { stockKg, stockBori, product_id, inventory_id } = req.body;
+    const { stockQuantity, unit, product_id, inventory_id } = req.body;
     
     // Validate required fields
-    if (stockKg === undefined || stockBori === undefined || !product_id || !inventory_id) {
+    if (stockQuantity === undefined || !unit || !product_id || !inventory_id) {
       return res.status(400).json({
         success: false,
-        message: 'Stock kg, stock bori, product ID, and inventory ID are required'
+        message: 'Stock quantity, unit, product ID, and inventory ID are required'
       });
     }
     
-    // Validate stock values are non-negative
-    if (stockKg < 0 || stockBori < 0) {
+    // Validate unit is valid enum value
+    if (!['KG', 'BORI'].includes(unit)) {
       return res.status(400).json({
         success: false,
-        message: 'Stock values cannot be negative'
+        message: 'Unit must be either KG or BORI'
+      });
+    }
+    
+    // Validate stock quantity is non-negative
+    if (stockQuantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock quantity cannot be negative'
       });
     }
     
@@ -115,39 +129,28 @@ const createStock = async (req, res) => {
       });
     }
     
-    // Check if stock record already exists for this product in this inventory
+    // Check if stock record already exists for this product in this inventory with the same unit
     const existingStock = await Stock.findOne({ 
-      where: { product_id, inventory_id } 
+      where: { product_id, inventory_id, unit } 
     });
     if (existingStock) {
       return res.status(409).json({
         success: false,
-        message: 'Stock record already exists for this product in this inventory'
+        message: 'Stock record already exists for this product in this inventory with the same unit'
       });
     }
     
     // Create stock record
     const newStock = await Stock.create({
-      stockKg,
-      stockBori,
+      stockQuantity,
+      unit,
       product_id,
       inventory_id
     });
     
     // Fetch the created stock record with associations
     const stockWithAssociations = await Stock.findByPk(newStock.id, {
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ]
+      include: getStockIncludes()
     });
     
     res.status(201).json({
@@ -169,7 +172,7 @@ const createStock = async (req, res) => {
 const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { stockKg, stockBori, product_id, inventory_id } = req.body;
+    const { stockQuantity, unit, product_id, inventory_id } = req.body;
     
     // Check if stock record exists
     const stock = await Stock.findByPk(id);
@@ -180,11 +183,19 @@ const updateStock = async (req, res) => {
       });
     }
     
-    // Validate stock values are non-negative (if provided)
-    if ((stockKg !== undefined && stockKg < 0) || (stockBori !== undefined && stockBori < 0)) {
+    // Validate unit is valid enum value (if provided)
+    if (unit && !['KG', 'BORI'].includes(unit)) {
       return res.status(400).json({
         success: false,
-        message: 'Stock values cannot be negative'
+        message: 'Unit must be either KG or BORI'
+      });
+    }
+    
+    // Validate stock quantity is non-negative (if provided)
+    if (stockQuantity !== undefined && stockQuantity < 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Stock quantity cannot be negative'
       });
     }
     
@@ -211,29 +222,31 @@ const updateStock = async (req, res) => {
     }
     
     // Check if updated record would create a duplicate
-    if (product_id || inventory_id) {
+    if (product_id || inventory_id || unit) {
       const checkProductId = product_id || stock.product_id;
       const checkInventoryId = inventory_id || stock.inventory_id;
+      const checkUnit = unit || stock.unit;
       
       const existingStock = await Stock.findOne({ 
         where: { 
           product_id: checkProductId, 
           inventory_id: checkInventoryId,
-          id: { [require('sequelize').Op.ne]: id }
+          unit: checkUnit,
+          id: { [Op.ne]: id }
         } 
       });
       if (existingStock) {
         return res.status(409).json({
           success: false,
-          message: 'Stock record already exists for this product in this inventory'
+          message: 'Stock record already exists for this product in this inventory with the same unit'
         });
       }
     }
     
     // Prepare update data
     const updateData = {};
-    if (stockKg !== undefined) updateData.stockKg = stockKg;
-    if (stockBori !== undefined) updateData.stockBori = stockBori;
+    if (stockQuantity !== undefined) updateData.stockQuantity = stockQuantity;
+    if (unit) updateData.unit = unit;
     if (product_id) updateData.product_id = product_id;
     if (inventory_id) updateData.inventory_id = inventory_id;
     
@@ -242,18 +255,7 @@ const updateStock = async (req, res) => {
     
     // Return updated stock record with associations
     const updatedStock = await Stock.findByPk(id, {
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ]
+      include: getStockIncludes()
     });
     
     res.status(200).json({
@@ -318,18 +320,7 @@ const getStockByProduct = async (req, res) => {
     
     const stock = await Stock.findAll({
       where: { product_id: productId },
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ],
+      include: getStockIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
@@ -364,18 +355,7 @@ const getStockByInventory = async (req, res) => {
     
     const stock = await Stock.findAll({
       where: { inventory_id: inventoryId },
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ],
+      include: getStockIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
@@ -401,24 +381,23 @@ const getLowStock = async (req, res) => {
     
     const lowStock = await Stock.findAll({
       where: {
-        [require('sequelize').Op.or]: [
-          { stockKg: { [require('sequelize').Op.lt]: parseFloat(kgThreshold) } },
-          { stockBori: { [require('sequelize').Op.lt]: parseFloat(boriThreshold) } }
+        [Op.or]: [
+          { 
+            [Op.and]: [
+              { unit: 'KG' },
+              { stockQuantity: { [Op.lt]: parseFloat(kgThreshold) } }
+            ]
+          },
+          { 
+            [Op.and]: [
+              { unit: 'BORI' },
+              { stockQuantity: { [Op.lt]: parseFloat(boriThreshold) } }
+            ]
+          }
         ]
       },
-      include: [
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        }
-      ],
-      order: [['stockKg', 'ASC'], ['stockBori', 'ASC']]
+      include: getStockIncludes(),
+      order: [['stockQuantity', 'ASC'], ['unit', 'ASC']]
     });
     
     res.status(200).json({
@@ -440,6 +419,186 @@ const getLowStock = async (req, res) => {
   }
 };
 
+// Get stock summary by product (aggregated across all inventories)
+const getStockSummaryByProduct = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    
+    // Check if product exists
+    const product = await Product.findByPk(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: 'Product not found'
+      });
+    }
+    
+    const stockSummary = await Stock.findAll({
+      where: { product_id: productId },
+      attributes: [
+        'unit',
+        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalQuantity'],
+        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'inventoryCount']
+      ],
+      group: ['unit'],
+      raw: true
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: `Stock summary for product '${product.productName}' retrieved successfully`,
+      data: {
+        product: {
+          id: product.id,
+          productName: product.productName,
+          ratePerKg: product.ratePerKg,
+          ratePerBori: product.ratePerBori
+        },
+        summary: stockSummary
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stock summary by product:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching stock summary by product',
+      error: error.message
+    });
+  }
+};
+
+// Get stock summary by inventory (aggregated across all products)
+const getStockSummaryByInventory = async (req, res) => {
+  try {
+    const { inventoryId } = req.params;
+    
+    // Check if inventory exists
+    const inventory = await Inventory.findByPk(inventoryId);
+    if (!inventory) {
+      return res.status(404).json({
+        success: false,
+        message: 'Inventory not found'
+      });
+    }
+    
+    const stockSummary = await Stock.findAll({
+      where: { inventory_id: inventoryId },
+      attributes: [
+        'unit',
+        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalQuantity'],
+        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'productCount']
+      ],
+      group: ['unit'],
+      raw: true
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: `Stock summary for inventory '${inventory.inventoryName}' retrieved successfully`,
+      data: {
+        inventory: {
+          id: inventory.id,
+          inventoryName: inventory.inventoryName,
+          address: inventory.address,
+          contactNumber: inventory.contactNumber
+        },
+        summary: stockSummary
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching stock summary by inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching stock summary by inventory',
+      error: error.message
+    });
+  }
+};
+
+// Update stock quantity (add or subtract)
+const updateStockQuantity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantityChange, operation } = req.body;
+    
+    // Validate required fields
+    if (quantityChange === undefined || !operation) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity change and operation are required'
+      });
+    }
+    
+    // Validate operation
+    if (!['ADD', 'SUBTRACT'].includes(operation)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Operation must be either ADD or SUBTRACT'
+      });
+    }
+    
+    // Validate quantity change is positive
+    if (quantityChange <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quantity change must be positive'
+      });
+    }
+    
+    // Check if stock record exists
+    const stock = await Stock.findByPk(id);
+    if (!stock) {
+      return res.status(404).json({
+        success: false,
+        message: 'Stock record not found'
+      });
+    }
+    
+    // Calculate new quantity
+    let newQuantity;
+    if (operation === 'ADD') {
+      newQuantity = stock.stockQuantity + quantityChange;
+    } else {
+      newQuantity = stock.stockQuantity - quantityChange;
+      
+      // Prevent negative stock
+      if (newQuantity < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Insufficient stock quantity. Cannot subtract more than available stock.'
+        });
+      }
+    }
+    
+    // Update stock quantity
+    await stock.update({ stockQuantity: newQuantity });
+    
+    // Return updated stock record with associations
+    const updatedStock = await Stock.findByPk(id, {
+      include: getStockIncludes()
+    });
+    
+    res.status(200).json({
+      success: true,
+      message: `Stock quantity ${operation.toLowerCase()}ed successfully`,
+      data: updatedStock,
+      operation: {
+        type: operation,
+        quantityChange: quantityChange,
+        previousQuantity: stock.stockQuantity,
+        newQuantity: newQuantity
+      }
+    });
+  } catch (error) {
+    console.error('Error updating stock quantity:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating stock quantity',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllStock,
   getStockById,
@@ -448,5 +607,8 @@ module.exports = {
   deleteStock,
   getStockByProduct,
   getStockByInventory,
-  getLowStock
+  getLowStock,
+  getStockSummaryByProduct,
+  getStockSummaryByInventory,
+  updateStockQuantity
 };

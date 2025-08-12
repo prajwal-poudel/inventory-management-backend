@@ -14,7 +14,7 @@ module.exports = {
     await queryInterface.bulkInsert('user', [
       {
         id: 1,
-        fullname: 'Super Admin',
+        fullname: 'SuperAdmin',
         email: 'superadmin@inventory.com',
         password: adminPassword,
         role: 'superadmin',
@@ -23,7 +23,7 @@ module.exports = {
       },
       {
         id: 2,
-        fullname: 'Admin Manager',
+        fullname: 'AdminManager',
         email: 'admin@inventory.com',
         password: managerPassword,
         role: 'admin',
@@ -32,7 +32,7 @@ module.exports = {
       },
       {
         id: 3,
-        fullname: 'Staff Member',
+        fullname: 'StaffMember',
         email: 'staff@inventory.com',
         password: staffPassword,
         role: 'admin',
@@ -41,7 +41,7 @@ module.exports = {
       },
       {
         id: 4,
-        fullname: 'Regular User',
+        fullname: 'RegularUser',
         email: 'user@inventory.com',
         password: userPassword,
         role: 'driver',
@@ -50,7 +50,7 @@ module.exports = {
       },
       {
         id: 5,
-        fullname: 'John Doe',
+        fullname: 'JohnDoe',
         email: 'john.doe@inventory.com',
         password: userPassword,
         role: 'driver',

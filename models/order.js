@@ -16,10 +16,28 @@ module.exports = (sequelize, DataTypes) => {
         as: 'product'
       });
       
+      // Order belongs to Inventory
+      Order.belongsTo(models.Inventory, {
+        foreignKey: 'inventoryId',
+        as: 'inventory'
+      });
+      
+      // Order belongs to User (who verified/added the order)
+      Order.belongsTo(models.User, {
+        foreignKey: 'orderVerifiedBy',
+        as: 'verifiedBy'
+      });
+      
       // Order has one delivery
       Order.hasOne(models.Delivery, {
         foreignKey: 'order_id',
         as: 'delivery'
+      });
+      
+      // Order belongs to Unit
+      Order.belongsTo(models.Unit, {
+        foreignKey: 'unit_id',
+        as: 'unit'
       });
     }
   }
@@ -46,15 +64,32 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    inventoryId: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'inventory',
+        key: 'id'
+      }
+    },
+    orderVerifiedBy: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'user',
+        key: 'id'
+      }
+    },
     quantity: {
       type: DataTypes.DOUBLE,
       allowNull: false
     },
-    unit: {
-      type: DataTypes.STRING(5),
+    unit_id: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      validate: {
-        isIn: [['kg', 'bori']]
+      references: {
+        model: 'units',
+        key: 'id'
       }
     },
     status: {

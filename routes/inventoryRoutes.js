@@ -18,26 +18,40 @@ const {
 
 // Public routes (authentication required but accessible to all authenticated users)
 // GET /api/inventories - Get all inventories
-router.get('/', authenticateToken, getAllInventories);
+router.get('/',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, getAllInventories);
 
 // GET /api/inventories/search - Search inventories by name or address
-router.get('/search', authenticateToken, searchInventories);
+router.get('/search',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, searchInventories);
 
 // GET /api/inventories/:id - Get inventory by ID
-router.get('/:id', authenticateToken, getInventoryById);
+router.get('/:id',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, getInventoryById);
 
 // GET /api/inventories/:id/stats - Get inventory statistics
-router.get('/:id/stats', authenticateToken, getInventoryStats);
+router.get('/:id/stats',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, getInventoryStats);
 
 // Admin only routes
 // POST /api/inventories - Create new inventory (admin only)
-router.post('/', authenticateToken, requireAdmin, createInventory);
+router.post('/',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, requireAdmin, createInventory);
 
 // PUT /api/inventories/:id - Update inventory (admin only)
-router.put('/:id', authenticateToken, requireAdmin, updateInventory);
+router.put('/:id',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, requireAdmin, updateInventory);
 
 // Super admin only routes
 // DELETE /api/inventories/:id - Delete inventory (super admin only)
-router.delete('/:id', authenticateToken, requireSuperAdmin, deleteInventory);
+router.delete('/:id',
+  // #swagger.tags = ['Inventory']
+  authenticateToken, requireSuperAdmin, deleteInventory);
 
 module.exports = router;

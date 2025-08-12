@@ -12,7 +12,13 @@ module.exports = (sequelize, DataTypes) => {
       User.hasOne(models.Driver, {
         foreignKey: 'user_id',
         as: 'driver'
-      })
+      });
+      
+      // User can verify/add orders
+      User.hasMany(models.Order, {
+        foreignKey: 'orderVerifiedBy',
+        as: 'verifiedOrders'
+      });
     }
   }
   

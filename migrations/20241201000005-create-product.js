@@ -1,25 +1,16 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('product', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
       productName: {
         type: Sequelize.STRING(255),
-        allowNull: false
-      },
-      ratePerKg: {
-        type: Sequelize.DOUBLE,
-        allowNull: false
-      },
-      ratePerBori: {
-        type: Sequelize.DOUBLE,
         allowNull: false
       },
       description: {
@@ -37,18 +28,18 @@ module.exports = {
         onDelete: 'RESTRICT'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add index for foreign key
+    // Add foreign key index
     await queryInterface.addIndex('product', ['category_id'], {
       name: 'product_category_id_idx'
     });
