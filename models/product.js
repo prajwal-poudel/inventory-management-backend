@@ -21,6 +21,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'product_id',
         as: 'stock'
       });
+      
+      // Product has many ProductUnits (rates for different units)
+      Product.hasMany(models.ProductUnits, {
+        foreignKey: 'product_id',
+        as: 'productUnits'
+      });
     }
   }
   
@@ -34,14 +40,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(255),
       allowNull: false
     },
-    ratePerKg: {
-      type: DataTypes.DOUBLE,
-      allowNull: false
-    },
-    ratePerBori: {
-      type: DataTypes.DOUBLE,
-      allowNull: false
-    },
+
     description: {
       type: DataTypes.STRING(255),
       allowNull: true

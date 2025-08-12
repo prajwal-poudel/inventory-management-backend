@@ -1,14 +1,13 @@
 'use strict';
 
-/** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('coordinate', {
       id: {
-        allowNull: false,
-        autoIncrement: true,
+        type: Sequelize.INTEGER,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        autoIncrement: true,
+        allowNull: false
       },
       lat: {
         type: Sequelize.STRING(255),
@@ -29,39 +28,24 @@ module.exports = {
         onDelete: 'CASCADE'
       },
       createdAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updatedAt: {
-        allowNull: false,
         type: Sequelize.DATE,
+        allowNull: false,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add index for foreign key
+    // Add foreign key index
     await queryInterface.addIndex('coordinate', ['customer_id'], {
       name: 'coordinate_customer_id_idx'
-    });
-
-    // Add foreign key constraint to customer table
-    await queryInterface.addConstraint('customer', {
-      fields: ['coordinateId'],
-      type: 'foreign key',
-      name: 'customer_coordinate_fk',
-      references: {
-        table: 'coordinate',
-        field: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
     });
   },
 
   async down(queryInterface, Sequelize) {
-    // Remove foreign key constraint from customer table first
-    await queryInterface.removeConstraint('customer', 'customer_coordinate_fk');
     await queryInterface.dropTable('coordinate');
   }
 };

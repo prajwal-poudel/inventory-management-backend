@@ -23,7 +23,7 @@ module.exports = {
       {
         id: 3,
         inventoryName: 'Cold Storage Unit',
-        address: '789 Refrigeration St, Industrial Zone',
+        address: '789 Refrigeration St, Industrial',
         contactNumber: '+1234567892',
         createdAt: new Date(),
         updatedAt: new Date()

@@ -15,6 +15,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'inventory_id',
         as: 'inventory'
       });
+      
+      // Stock belongs to Unit
+      Stock.belongsTo(models.Unit, {
+        foreignKey: 'unit_id',
+        as: 'unit'
+      });
     }
   }
   
@@ -24,15 +30,18 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       autoIncrement: true
     },
-    stockKg: {
+    stockQuantity: {
       type: DataTypes.DOUBLE,
       allowNull: false,
       defaultValue: 0
     },
-    stockBori: {
-      type: DataTypes.DOUBLE,
+    unit_id: {
+      type: DataTypes.INTEGER,
       allowNull: false,
-      defaultValue: 0
+      references: {
+        model: 'units',
+        key: 'id'
+      }
     },
     product_id: {
       type: DataTypes.INTEGER,

@@ -332,15 +332,37 @@ const getInventoryStats = async (req, res) => {
       });
     }
     
-    // Get stock statistics
-    const stockStats = await Stock.findAll({
-      where: { inventory_id: id },
+    // Get stock statistics for KG
+    const stockStatsKg = await Stock.findAll({
+      where: { 
+        inventory_id: id,
+        unit: 'KG'
+      },
       attributes: [
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalProducts'],
-        [require('sequelize').fn('SUM', require('sequelize').col('stockKg')), 'totalStockKg'],
-        [require('sequelize').fn('SUM', require('sequelize').col('stockBori')), 'totalStockBori']
+        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalProductsKg'],
+        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalStockKg']
       ],
       raw: true
+    });
+    
+    // Get stock statistics for BORI
+    const stockStatsBori = await Stock.findAll({
+      where: { 
+        inventory_id: id,
+        unit: 'BORI'
+      },
+      attributes: [
+        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalProductsBori'],
+        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalStockBori']
+      ],
+      raw: true
+    });
+    
+    // Get total unique products count
+    const totalProducts = await Stock.count({
+      where: { inventory_id: id },
+      distinct: true,
+      col: 'product_id'
     });
     
     // Get manager count
@@ -351,8 +373,18 @@ const getInventoryStats = async (req, res) => {
       where: {
         inventory_id: id,
         [require('sequelize').Op.or]: [
-          { stockKg: { [require('sequelize').Op.lt]: 10 } },
-          { stockBori: { [require('sequelize').Op.lt]: 5 } }
+          { 
+            [require('sequelize').Op.and]: [
+              { unit: 'KG' },
+              { stockQuantity: { [require('sequelize').Op.lt]: 10 } }
+            ]
+          },
+          { 
+            [require('sequelize').Op.and]: [
+              { unit: 'BORI' },
+              { stockQuantity: { [require('sequelize').Op.lt]: 5 } }
+            ]
+          }
         ]
       }
     });
@@ -364,9 +396,11 @@ const getInventoryStats = async (req, res) => {
         address: inventory.address,
         contactNumber: inventory.contactNumber
       },
-      totalProducts: parseInt(stockStats[0].totalProducts) || 0,
-      totalStockKg: parseFloat(stockStats[0].totalStockKg) || 0,
-      totalStockBori: parseFloat(stockStats[0].totalStockBori) || 0,
+      totalProducts: totalProducts || 0,
+      totalProductsKg: parseInt(stockStatsKg[0]?.totalProductsKg) || 0,
+      totalProductsBori: parseInt(stockStatsBori[0]?.totalProductsBori) || 0,
+      totalStockKg: parseFloat(stockStatsKg[0]?.totalStockKg) || 0,
+      totalStockBori: parseFloat(stockStatsBori[0]?.totalStockBori) || 0,
       managerCount: managerCount,
       lowStockCount: lowStockCount
     };
