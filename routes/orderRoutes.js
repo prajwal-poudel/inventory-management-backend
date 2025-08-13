@@ -56,13 +56,13 @@ router.post('/',
     required: true,
     schema: {
       type: 'object',
-      required: ['customerId', 'productId', 'inventoryId', 'quantity', 'unit'],
+      required: ['customerId', 'productId', 'inventoryId', 'quantity', 'unit_id'],
       properties: {
         customerId: { type: 'integer', example: 1 },
         productId: { type: 'integer', example: 1 },
         inventoryId: { type: 'integer', example: 1 },
         quantity: { type: 'number', example: 10 },
-        unit: { type: 'string', example: 'KG' },
+        unit_id: { type: 'integer', example: 1 },
         status: { type: 'string', enum: ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'], example: 'pending' },
         paymentMethod: { type: 'string', enum: ['cash', 'cheque', 'card', 'no'], example: 'cash' },
         orderDate: { type: 'string', format: 'date-time', example: '2024-01-01T00:00:00.000Z' }

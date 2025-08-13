@@ -1,4 +1,4 @@
-const { Product, Category, Stock, ProductUnits, Unit } = require('../models');
+const { Product, Category, Stock, ProductUnits, Unit, Inventory } = require('../models');
 
 // Get all products
 const getAllProducts = async (req, res) => {
@@ -12,8 +12,20 @@ const getAllProducts = async (req, res) => {
         },
         {
           model: Stock,
-          as: 'stock',
-          attributes: ['id', 'stockQuantity', 'unit']
+          as: 'stocks',
+          attributes: ['id', 'stockQuantity', 'unit_id', 'inventory_id'],
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Inventory,
+              as: 'inventory',
+              attributes: ['id', 'inventoryName']
+            }
+          ]
         },
         {
           model: ProductUnits,
@@ -59,8 +71,20 @@ const getProductById = async (req, res) => {
         },
         {
           model: Stock,
-          as: 'stock',
-          attributes: ['id', 'stockQuantity', 'unit']
+          as: 'stocks',
+          attributes: ['id', 'stockQuantity', 'unit_id', 'inventory_id'],
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Inventory,
+              as: 'inventory',
+              attributes: ['id', 'inventoryName']
+            }
+          ]
         },
         {
           model: ProductUnits,
@@ -253,8 +277,20 @@ const updateProduct = async (req, res) => {
         },
         {
           model: Stock,
-          as: 'stock',
-          attributes: ['id', 'stockQuantity', 'unit']
+          as: 'stocks',
+          attributes: ['id', 'stockQuantity', 'unit_id', 'inventory_id'],
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Inventory,
+              as: 'inventory',
+              attributes: ['id', 'inventoryName']
+            }
+          ]
         },
         {
           model: ProductUnits,
@@ -340,8 +376,20 @@ const getProductsByCategory = async (req, res) => {
         },
         {
           model: Stock,
-          as: 'stock',
-          attributes: ['id', 'stockQuantity', 'unit']
+          as: 'stocks',
+          attributes: ['id', 'stockQuantity', 'unit_id', 'inventory_id'],
+          include: [
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
+            },
+            {
+              model: Inventory,
+              as: 'inventory',
+              attributes: ['id', 'inventoryName']
+            }
+          ]
         },
         {
           model: ProductUnits,

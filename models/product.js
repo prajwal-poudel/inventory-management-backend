@@ -16,10 +16,10 @@ module.exports = (sequelize, DataTypes) => {
         as: 'orders'
       });
       
-      // Product has stock
-      Product.hasOne(models.Stock, {
+      // Product has many stock records
+      Product.hasMany(models.Stock, {
         foreignKey: 'product_id',
-        as: 'stock'
+        as: 'stocks'
       });
       
       // Product has many ProductUnits (rates for different units)

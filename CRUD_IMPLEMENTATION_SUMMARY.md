@@ -74,20 +74,40 @@ Successfully implemented complete CRUD operations for all requested modules in t
   - Get relationships by user
   - Get relationships by inventory
 
-### 7. Stock Module ✅
+### 7. Stock Module ✅ (Updated)
 - **Controller**: `controller/stockController.js`
 - **Routes**: `routes/stockRoutes.js`
 - **Features**:
-  - Get all stock records with product and inventory info
+  - Get all stock records with product, inventory, and unit info
   - Get stock record by ID
-  - Create new stock record with validation
-  - Update stock record with validation
+  - Create new stock record with unit_id validation
+  - Update stock record with unit_id validation
   - Delete stock record
   - Get stock by product
   - Get stock by inventory
-  - Get low stock items with configurable thresholds
+  - Get low stock items with single configurable threshold
+  - Get stock summary by product (grouped by unit)
+  - Get stock summary by inventory (grouped by unit)
+  - Update stock quantity (add/subtract operations)
+- **Recent Updates**:
+  - Migrated from hardcoded unit strings to unit_id references
+  - Added Unit model associations
+  - Simplified low stock threshold logic
+  - Added stock summary endpoints
+  - Added stock quantity update endpoint
 
-### 8. Inventory Module ✅
+### 8. Unit Module ✅
+- **Controller**: `controller/unitController.js`
+- **Routes**: `routes/unitRoutes.js`
+- **Features**:
+  - Get all units with associated stock and product units
+  - Get unit by ID
+  - Create new unit with name validation
+  - Update unit with validation
+  - Delete unit with dependency check
+- **Purpose**: Manages measurement units (KG, BORI, etc.) used in stock and orders
+
+### 9. Inventory Module ✅
 - **Controller**: `controller/inventoryController.js`
 - **Routes**: `routes/inventoryRoutes.js`
 - **Features**:
@@ -99,7 +119,7 @@ Successfully implemented complete CRUD operations for all requested modules in t
   - Search inventories by name or address
   - Get inventory statistics (products, stock, managers, low stock)
 
-### 9. Coordinate Module ✅
+### 10. Coordinate Module ✅
 - **Controller**: `controller/coordinateController.js`
 - **Routes**: `routes/coordinateRoutes.js`
 - **Features**:
@@ -193,7 +213,7 @@ Successfully implemented complete CRUD operations for all requested modules in t
 
 ## API Endpoints Summary
 
-Total endpoints implemented: **60+ endpoints**
+Total endpoints implemented: **70+ endpoints**
 
 ### Endpoint Distribution
 - **User**: 9 endpoints
@@ -203,7 +223,8 @@ Total endpoints implemented: **60+ endpoints**
 - **Delivery**: 7 endpoints
 - **Driver**: 7 endpoints
 - **Manages**: 7 endpoints
-- **Stock**: 8 endpoints
+- **Stock**: 11 endpoints (updated)
+- **Unit**: 5 endpoints (new)
 - **Inventory**: 7 endpoints
 - **Coordinate**: 7 endpoints
 
@@ -221,9 +242,29 @@ Total endpoints implemented: **60+ endpoints**
 5. Add API rate limiting
 6. Implement caching for frequently accessed data
 
+## Recent Updates (December 2024)
+
+### Stock Module Refactoring
+- **Migration**: Converted from hardcoded unit strings to unit_id references
+- **Database**: Updated Stock model to use foreign key relationship with Unit table
+- **API Changes**: 
+  - Request parameter changed from `unit` to `unit_id`
+  - Low stock API simplified from dual thresholds to single threshold
+  - Added stock summary endpoints for better reporting
+  - Added stock quantity update endpoint for inventory adjustments
+- **Validation**: Enhanced validation to check unit existence in database
+- **Associations**: Added Unit model inclusion in all stock responses
+
+### Documentation Updates
+- Updated `API_DOCUMENTATION.md` with new Stock and Unit endpoints
+- Created detailed `STOCK_API_DOCUMENTATION.md` for comprehensive Stock API reference
+- Updated endpoint counts and distribution
+- Added migration notes for breaking changes
+
 ## Notes
 - All CRUD operations follow the same pattern as the existing user module
 - Proper error handling and validation implemented throughout
 - Security middleware applied consistently
 - Database relationships properly handled
 - Response format standardized across all endpoints
+- Stock module has been updated to use referential integrity with Unit table
