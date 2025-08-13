@@ -36,6 +36,11 @@ const getOrderIncludes = () => [
     attributes: ['id', 'fullname', 'email', 'role']
   },
   {
+    model: Unit,
+    as: 'unit',
+    attributes: ['id', 'name']
+  },
+  {
     model: Delivery,
     as: 'delivery',
     attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
@@ -99,7 +104,7 @@ const getOrderById = async (req, res) => {
 // Create new order
 const createOrder = async (req, res) => {
   try {
-    const { customerId, productId, inventoryId, quantity, unit, status, paymentMethod, orderDate } = req.body;
+    const { customerId, productId, inventoryId, quantity, unit_id, status, paymentMethod, orderDate } = req.body;
     
     // Get the authenticated user from the request (set by auth middleware)
     const userId = req.user.id;
@@ -114,10 +119,10 @@ const createOrder = async (req, res) => {
     }
     
     // Validate required fields
-    if (!customerId || !productId || !inventoryId || !quantity || !unit) {
+    if (!customerId || !productId || !inventoryId || !quantity || !unit_id) {
       return res.status(400).json({
         success: false,
-        message: 'Customer ID, Product ID, Inventory ID, quantity, and unit are required'
+        message: 'Customer ID, Product ID, Inventory ID, quantity, and unit ID are required'
       });
     }
     
@@ -169,12 +174,12 @@ const createOrder = async (req, res) => {
       });
     }
     
-    // Validate unit and get rate from ProductUnits
-    const unitRecord = await Unit.findOne({ where: { name: unit } });
+    // Validate unit exists
+    const unitRecord = await Unit.findByPk(unit_id);
     if (!unitRecord) {
-      return res.status(400).json({
+      return res.status(404).json({
         success: false,
-        message: `Invalid unit '${unit}'. Unit not found in system.`
+        message: 'Unit not found'
       });
     }
     
@@ -182,7 +187,7 @@ const createOrder = async (req, res) => {
     const productUnit = await ProductUnits.findOne({
       where: {
         product_id: productId,
-        unit_id: unitRecord.id
+        unit_id: unit_id
       },
       include: [
         {
@@ -196,7 +201,7 @@ const createOrder = async (req, res) => {
     if (!productUnit) {
       return res.status(404).json({
         success: false,
-        message: `No rate found for product '${product.productName}' in unit '${unit}'. Please set up pricing for this product-unit combination.`
+        message: `No rate found for product '${product.productName}' in unit '${unitRecord.name}'. Please set up pricing for this product-unit combination.`
       });
     }
     
@@ -217,14 +222,14 @@ const createOrder = async (req, res) => {
       where: {
         product_id: productId,
         inventory_id: inventoryId,
-        unit: unit
+        unit_id: unit_id
       }
     });
     
     if (!stockRecord) {
       return res.status(404).json({
         success: false,
-        message: `No stock record found for this product in the specified inventory with unit ${unit}`
+        message: `No stock record found for this product in the specified inventory with unit ${unitRecord.name}`
       });
     }
     
@@ -232,7 +237,7 @@ const createOrder = async (req, res) => {
     if (stockRecord.stockQuantity < quantity) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock. Available: ${stockRecord.stockQuantity} ${unit}, Requested: ${quantity} ${unit}`
+        message: `Insufficient stock. Available: ${stockRecord.stockQuantity} ${unitRecord.name}, Requested: ${quantity} ${unitRecord.name}`
       });
     }
     
@@ -247,7 +252,7 @@ const createOrder = async (req, res) => {
         inventoryId,
         orderVerifiedBy: userId,
         quantity,
-        unit,
+        unit_id,
         status: status || 'pending',
         paymentMethod: paymentMethod || 'no',
         orderDate: orderDate || new Date(),
@@ -309,7 +314,7 @@ const createOrder = async (req, res) => {
           calculation: {
             rate: productUnit.rate,
             quantity: quantity,
-            unit: unit,
+            unit: unitRecord.name,
             totalAmount: totalAmount,
             formula: `${productUnit.rate} × ${quantity} = ${totalAmount}`
           },
@@ -317,7 +322,7 @@ const createOrder = async (req, res) => {
             previousStock: stockRecord.stockQuantity + quantity,
             currentStock: stockRecord.stockQuantity,
             quantityUsed: quantity,
-            unit: unit
+            unit: unitRecord.name
           }
         }
       });
@@ -341,7 +346,7 @@ const createOrder = async (req, res) => {
 const updateOrder = async (req, res) => {
   try {
     const { id } = req.params;
-    const { customerId, productId, inventoryId, quantity, unit, status, paymentMethod, orderDate, totalAmount } = req.body;
+    const { customerId, productId, inventoryId, quantity, unit_id, status, paymentMethod, orderDate, totalAmount } = req.body;
     
     // Get the authenticated user from the request (set by auth middleware)
     const userRole = req.user.role;
@@ -364,12 +369,12 @@ const updateOrder = async (req, res) => {
     }
     
     // Validate unit if provided
-    if (unit) {
-      const validUnits = ['KG', 'BORI'];
-      if (!validUnits.includes(unit)) {
-        return res.status(400).json({
+    if (unit_id) {
+      const unit = await Unit.findByPk(unit_id);
+      if (!unit) {
+        return res.status(404).json({
           success: false,
-          message: 'Invalid unit. Valid units are: KG, BORI'
+          message: 'Unit not found'
         });
       }
     }
@@ -435,7 +440,7 @@ const updateOrder = async (req, res) => {
     if (productId) updateData.productId = productId;
     if (inventoryId) updateData.inventoryId = inventoryId;
     if (quantity) updateData.quantity = quantity;
-    if (unit) updateData.unit = unit;
+    if (unit_id) updateData.unit_id = unit_id;
     if (status) updateData.status = status;
     if (paymentMethod) updateData.paymentMethod = paymentMethod;
     if (orderDate) updateData.orderDate = orderDate;
@@ -446,33 +451,7 @@ const updateOrder = async (req, res) => {
     
     // Return updated order with associations
     const updatedOrder = await Order.findByPk(id, {
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['id', 'customerName', 'email', 'phone']
-        },
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        },
-        {
-          model: User,
-          as: 'verifiedBy',
-          attributes: ['id', 'fullname', 'email', 'role']
-        },
-        {
-          model: Delivery,
-          as: 'delivery',
-          attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
-        }
-      ]
+      include: getOrderIncludes()
     });
     
     res.status(200).json({
@@ -537,33 +516,7 @@ const getOrdersByCustomer = async (req, res) => {
     
     const orders = await Order.findAll({
       where: { customerId },
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['id', 'customerName', 'email', 'phone']
-        },
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        },
-        {
-          model: User,
-          as: 'verifiedBy',
-          attributes: ['id', 'fullname', 'email', 'role']
-        },
-        {
-          model: Delivery,
-          as: 'delivery',
-          attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
-        }
-      ],
+      include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
@@ -598,33 +551,7 @@ const getOrdersByStatus = async (req, res) => {
     
     const orders = await Order.findAll({
       where: { status },
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['id', 'customerName', 'email', 'phone']
-        },
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        },
-        {
-          model: User,
-          as: 'verifiedBy',
-          attributes: ['id', 'fullname', 'email', 'role']
-        },
-        {
-          model: Delivery,
-          as: 'delivery',
-          attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
-        }
-      ],
+      include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
@@ -680,28 +607,7 @@ const updateOrderStatus = async (req, res) => {
     
     // Return updated order with associations
     const updatedOrder = await Order.findByPk(id, {
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['id', 'customerName', 'email', 'phone']
-        },
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        },
-        {
-          model: Delivery,
-          as: 'delivery',
-          attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
-        }
-      ]
+      include: getOrderIncludes()
     });
     
     res.status(200).json({
@@ -735,33 +641,7 @@ const getOrdersByInventory = async (req, res) => {
     
     const orders = await Order.findAll({
       where: { inventoryId },
-      include: [
-        {
-          model: Customer,
-          as: 'customer',
-          attributes: ['id', 'customerName', 'email', 'phone']
-        },
-        {
-          model: Product,
-          as: 'product',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
-        },
-        {
-          model: Inventory,
-          as: 'inventory',
-          attributes: ['id', 'inventoryName', 'address', 'contactNumber']
-        },
-        {
-          model: User,
-          as: 'verifiedBy',
-          attributes: ['id', 'fullname', 'email', 'role']
-        },
-        {
-          model: Delivery,
-          as: 'delivery',
-          attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
-        }
-      ],
+      include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
     

@@ -10,8 +10,8 @@ module.exports = (sequelize, DataTypes) => {
         as: 'managers'
       });
       
-      // Inventory has stock
-      Inventory.hasOne(models.Stock, {
+      // Inventory has many stock records
+      Inventory.hasMany(models.Stock, {
         foreignKey: 'inventory_id',
         as: 'stock'
       });

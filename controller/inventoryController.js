@@ -1,4 +1,4 @@
-const { Inventory, Manages, User, Stock, Product } = require('../models');
+const { Inventory, Manages, User, Stock, Product, Unit } = require('../models');
 
 // Get all inventories
 const getAllInventories = async (req, res) => {
@@ -23,7 +23,12 @@ const getAllInventories = async (req, res) => {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
+              attributes: ['id', 'productName', 'description']
+            },
+            {
+              model: Unit,
+              as: 'unit',
+              attributes: ['id', 'name']
             }
           ]
         }
@@ -71,7 +76,7 @@ const getInventoryById = async (req, res) => {
             {
               model: Product,
               as: 'product',
-              attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori', 'description']
+              attributes: ['id', 'productName', 'description']
             }
           ]
         }
@@ -332,30 +337,25 @@ const getInventoryStats = async (req, res) => {
       });
     }
     
-    // Get stock statistics for KG
-    const stockStatsKg = await Stock.findAll({
+    // Get stock statistics grouped by unit
+    const stockStatsByUnit = await Stock.findAll({
       where: { 
-        inventory_id: id,
-        unit: 'KG'
+        inventory_id: id
       },
       attributes: [
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalProductsKg'],
-        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalStockKg']
+        'unit_id',
+        [require('sequelize').fn('COUNT', require('sequelize').col('Stock.id')), 'totalProducts'],
+        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalStock']
       ],
-      raw: true
-    });
-    
-    // Get stock statistics for BORI
-    const stockStatsBori = await Stock.findAll({
-      where: { 
-        inventory_id: id,
-        unit: 'BORI'
-      },
-      attributes: [
-        [require('sequelize').fn('COUNT', require('sequelize').col('id')), 'totalProductsBori'],
-        [require('sequelize').fn('SUM', require('sequelize').col('stockQuantity')), 'totalStockBori']
+      include: [
+        {
+          model: Unit,
+          as: 'unit',
+          attributes: ['id', 'name']
+        }
       ],
-      raw: true
+      group: ['unit_id', 'unit.id', 'unit.name'],
+      raw: false
     });
     
     // Get total unique products count
@@ -368,24 +368,11 @@ const getInventoryStats = async (req, res) => {
     // Get manager count
     const managerCount = await Manages.count({ where: { inventory_id: id } });
     
-    // Get low stock count (using default thresholds)
+    // Get low stock count (using default threshold of 10)
     const lowStockCount = await Stock.count({
       where: {
         inventory_id: id,
-        [require('sequelize').Op.or]: [
-          { 
-            [require('sequelize').Op.and]: [
-              { unit: 'KG' },
-              { stockQuantity: { [require('sequelize').Op.lt]: 10 } }
-            ]
-          },
-          { 
-            [require('sequelize').Op.and]: [
-              { unit: 'BORI' },
-              { stockQuantity: { [require('sequelize').Op.lt]: 5 } }
-            ]
-          }
-        ]
+        stockQuantity: { [require('sequelize').Op.lt]: 10 }
       }
     });
     
@@ -397,10 +384,11 @@ const getInventoryStats = async (req, res) => {
         contactNumber: inventory.contactNumber
       },
       totalProducts: totalProducts || 0,
-      totalProductsKg: parseInt(stockStatsKg[0]?.totalProductsKg) || 0,
-      totalProductsBori: parseInt(stockStatsBori[0]?.totalProductsBori) || 0,
-      totalStockKg: parseFloat(stockStatsKg[0]?.totalStockKg) || 0,
-      totalStockBori: parseFloat(stockStatsBori[0]?.totalStockBori) || 0,
+      stockByUnit: stockStatsByUnit.map(stat => ({
+        unit: stat.unit,
+        totalProducts: parseInt(stat.dataValues.totalProducts) || 0,
+        totalStock: parseFloat(stat.dataValues.totalStock) || 0
+      })),
       managerCount: managerCount,
       lowStockCount: lowStockCount
     };

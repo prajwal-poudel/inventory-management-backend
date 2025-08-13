@@ -141,7 +141,21 @@ http://localhost:3000/api
 ### Stock Utilities
 - `GET /stock/product/:productId` - Get stock by product (Public)
 - `GET /stock/inventory/:inventoryId` - Get stock by inventory (Public)
-- `GET /stock/low?kgThreshold=10&boriThreshold=5` - Get low stock items (Public)
+- `GET /stock/low?threshold=10` - Get low stock items (Public)
+- `GET /stock/summary/product/:productId` - Get stock summary by product (Public)
+- `GET /stock/summary/inventory/:inventoryId` - Get stock summary by inventory (Public)
+- `PUT /stock/:id/quantity` - Update stock quantity (add/subtract) (Admin)
+
+---
+
+## Unit Management
+
+### Unit CRUD Operations
+- `GET /units` - Get all units (Public)
+- `GET /units/:id` - Get unit by ID (Public)
+- `POST /units` - Create new unit (Admin)
+- `PUT /units/:id` - Update unit (Admin)
+- `DELETE /units/:id` - Delete unit (Super Admin)
 
 ---
 
@@ -221,8 +235,8 @@ Content-Type: application/json
 Authorization: Bearer <token>
 
 {
-  "stockKg": 100.5,
-  "stockBori": 2.0,
+  "stockQuantity": 100.5,
+  "unit_id": 1,
   "product_id": 1,
   "inventory_id": 1
 }
@@ -236,7 +250,25 @@ Authorization: Bearer <token>
 
 ### Get Low Stock Items
 ```bash
-GET /api/stock/low?kgThreshold=20&boriThreshold=10
+GET /api/stock/low?threshold=20
+Authorization: Bearer <token>
+```
+
+### Update Stock Quantity
+```bash
+PUT /api/stock/1/quantity
+Content-Type: application/json
+Authorization: Bearer <token>
+
+{
+  "quantityChange": 50,
+  "operation": "ADD"
+}
+```
+
+### Get Stock Summary by Product
+```bash
+GET /api/stock/summary/product/1
 Authorization: Bearer <token>
 ```
 
@@ -263,3 +295,17 @@ Authorization: Bearer <token>
 6. Stock values cannot be negative
 7. Phone numbers and email addresses are validated for format
 8. Unique constraints are enforced on email addresses, phone numbers, and names where applicable
+
+## Recent Updates
+
+### Stock Management (Updated)
+- **Breaking Change**: Stock API now uses `unit_id` instead of `unit` string
+- **New Endpoints**: Added stock summary and quantity update endpoints
+- **Simplified**: Low stock threshold now uses single parameter instead of unit-specific thresholds
+- **Enhanced**: All stock responses now include unit information as objects
+- **Documentation**: See `STOCK_API_DOCUMENTATION.md` for detailed information
+
+### Unit Management (New)
+- **New Module**: Added Unit management for handling measurement units
+- **Purpose**: Centralized unit management (KG, BORI, etc.) with referential integrity
+- **Integration**: Stock and Order modules now reference units by ID

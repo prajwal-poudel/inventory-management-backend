@@ -8,7 +8,7 @@ const getAllCategories = async (req, res) => {
         {
           model: Product,
           as: 'products',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
+          attributes: ['id', 'productName', 'description']
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -39,7 +39,7 @@ const getCategoryById = async (req, res) => {
         {
           model: Product,
           as: 'products',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori', 'description']
+          attributes: ['id', 'productName', 'description']
         }
       ]
     });
@@ -149,7 +149,7 @@ const updateCategory = async (req, res) => {
         {
           model: Product,
           as: 'products',
-          attributes: ['id', 'productName', 'ratePerKg', 'ratePerBori']
+          attributes: ['id', 'productName', 'description']
         }
       ]
     });
