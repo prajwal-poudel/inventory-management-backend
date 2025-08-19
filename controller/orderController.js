@@ -1,11 +1,11 @@
-const { Order, Customer, Product, Delivery, Inventory, User, Stock, ProductUnits, Unit } = require('../models');
+const { Order, Customer, Product, Delivery, Inventory, User, Stock, ProductUnits, Unit, Driver } = require('../models');
 
 // Helper function to get standard includes for order queries
 const getOrderIncludes = () => [
   {
     model: Customer,
     as: 'customer',
-    attributes: ['id', 'customerName', 'email', 'phone']
+    attributes: ['id', 'fullname', 'phoneNumber', 'address']
   },
   {
     model: Product,
@@ -43,7 +43,21 @@ const getOrderIncludes = () => [
   {
     model: Delivery,
     as: 'delivery',
-    attributes: ['id', 'deliveryDate', 'deliveryStatus', 'deliveryAddress']
+    attributes: ['id', 'order_id', 'driver_id', 'createdAt', 'updatedAt'],
+    include: [
+      {
+        model: Driver,
+        as: 'driver',
+        attributes: ['id', 'user_id', 'phoneNumber'],
+        include: [
+          {
+            model: User,
+            as: 'user',
+            attributes: ['id', 'fullname', 'email']
+          }
+        ]
+      }
+    ]
   }
 ];
 
@@ -273,7 +287,7 @@ const createOrder = async (req, res) => {
           {
             model: Customer,
             as: 'customer',
-            attributes: ['id', 'customerName', 'email', 'phone']
+            attributes: ['id', 'fullname', 'phoneNumber', 'address']
           },
           {
             model: Product,
