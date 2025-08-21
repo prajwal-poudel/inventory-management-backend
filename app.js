@@ -19,6 +19,7 @@ const inventoryRoutes = require('./routes/inventoryRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const unitRoutes = require('./routes/unitRoutes');
 const productUnitsRoutes = require('./routes/productUnitsRoutes');
+const summaryRoutes = require('./routes/summaryRoutes');
 
 const app = express()
 
@@ -73,6 +74,7 @@ app.use('/api/drivers', driverRoutes);
 app.use('/api/deliveries', deliveryRoutes);
 app.use('/api/units', unitRoutes);
 app.use('/api/product-units', productUnitsRoutes);
+app.use('/api/summary', summaryRoutes);
 
 // 404 handler for unmatched routes for API routes only
 app.use( (req, res) => {
