@@ -18,7 +18,8 @@ const getAllDrivers = async (req, res) => {
             {
               model: Order,
               as: 'order',
-              attributes: ['id', 'orderDate', 'totalAmount']
+              attributes: ['id', 'orderDate', 'totalAmount'],
+              include: []
             }
           ]
         }
@@ -61,7 +62,8 @@ const getDriverById = async (req, res) => {
             {
               model: Order,
               as: 'order',
-              attributes: ['id', 'orderDate', 'totalAmount', 'status']
+              attributes: ['id', 'orderDate', 'totalAmount', 'status'],
+              include: []
             }
           ]
         }
