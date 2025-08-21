@@ -10,7 +10,7 @@ module.exports = {
         allowNull: false
       },
       fullname: {
-        type: Sequelize.STRING(16),
+        type: Sequelize.STRING(255),
         allowNull: false
       },
       email: {
@@ -22,7 +22,7 @@ module.exports = {
         }
       },
       password: {
-        type: Sequelize.STRING(255),
+        type: Sequelize.TEXT,
         allowNull: false
       },
       role: {

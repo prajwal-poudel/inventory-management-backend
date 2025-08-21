@@ -1,5 +1,5 @@
 const { Stock, Product, Inventory, ProductUnits, Unit } = require('../models');
-const { Op } = require('sequelize');
+const { Op, fn, col, where } = require('sequelize');
 
 // Helper function to get standard includes for stock queries
 const getStockIncludes = () => [
@@ -33,18 +33,46 @@ const getStockIncludes = () => [
   }
 ];
 
+// Slim includes for aggregate queries to avoid hasMany join multiplication
+const getAggregatedIncludes = () => [
+  {
+    model: Product,
+    as: 'product',
+    attributes: ['id', 'productName', 'description']
+  },
+  {
+    model: Inventory,
+    as: 'inventory',
+    attributes: ['id', 'inventoryName', 'address', 'contactNumber']
+  },
+  {
+    model: Unit,
+    as: 'unit',
+    attributes: ['id', 'name']
+  }
+];
+
 // Get all stock records
 const getAllStock = async (req, res) => {
   try {
     const stock = await Stock.findAll({
-      include: getStockIncludes(),
-      order: [['createdAt', 'DESC']]
+      attributes: ['product_id', 'inventory_id', 'unit_id', [fn('SUM', col('stockQuantity')), 'stockQuantity']],
+      include: getAggregatedIncludes(),
+      group: ['Stock.product_id', 'Stock.inventory_id', 'Stock.unit_id', 'product.id', 'inventory.id', 'unit.id'],
+      order: [[fn('SUM', col('stockQuantity')), 'DESC']]
+    });
+
+    // If the DB returns plain objects, normalize stockQuantity number type
+    const aggregated = stock.map(r => {
+      const row = r.toJSON ? r.toJSON() : r;
+      row.stockQuantity = Number(row.stockQuantity);
+      return row;
     });
     
     res.status(200).json({
       success: true,
       message: 'Stock records retrieved successfully',
-      data: stock
+      data: aggregated
     });
   } catch (error) {
     console.error('Error fetching stock records:', error);
@@ -90,7 +118,7 @@ const getStockById = async (req, res) => {
 // Create new stock record
 const createStock = async (req, res) => {
   try {
-    const { stockQuantity, unit_id, product_id, inventory_id } = req.body;
+    const { stockQuantity, unit_id, product_id, inventory_id, method } = req.body;
     
     // Validate required fields
     if (stockQuantity === undefined || !unit_id || !product_id || !inventory_id) {
@@ -135,23 +163,15 @@ const createStock = async (req, res) => {
       });
     }
     
-    // Check if stock record already exists for this product in this inventory with the same unit
-    const existingStock = await Stock.findOne({ 
-      where: { product_id, inventory_id, unit_id } 
-    });
-    if (existingStock) {
-      return res.status(409).json({
-        success: false,
-        message: 'Stock record already exists for this product in this inventory with the same unit'
-      });
-    }
-    
+    // No duplicate check: allow multiple rows for same product/inventory/unit
+
     // Create stock record
     const newStock = await Stock.create({
       stockQuantity,
       unit_id,
       product_id,
-      inventory_id
+      inventory_id,
+      method: method || 'supplier'
     });
     
     // Fetch the created stock record with associations
@@ -178,7 +198,7 @@ const createStock = async (req, res) => {
 const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { stockQuantity, unit_id, product_id, inventory_id } = req.body;
+    const { stockQuantity, unit_id, product_id, inventory_id, method } = req.body;
     
     // Check if stock record exists
     const stock = await Stock.findByPk(id);
@@ -230,34 +250,15 @@ const updateStock = async (req, res) => {
       }
     }
     
-    // Check if updated record would create a duplicate
-    if (product_id || inventory_id || unit_id) {
-      const checkProductId = product_id || stock.product_id;
-      const checkInventoryId = inventory_id || stock.inventory_id;
-      const checkUnitId = unit_id || stock.unit_id;
-      
-      const existingStock = await Stock.findOne({ 
-        where: { 
-          product_id: checkProductId, 
-          inventory_id: checkInventoryId,
-          unit_id: checkUnitId,
-          id: { [Op.ne]: id }
-        } 
-      });
-      if (existingStock) {
-        return res.status(409).json({
-          success: false,
-          message: 'Stock record already exists for this product in this inventory with the same unit'
-        });
-      }
-    }
-    
+    // No duplicate checks on update: duplicates are allowed
+
     // Prepare update data
     const updateData = {};
     if (stockQuantity !== undefined) updateData.stockQuantity = stockQuantity;
     if (unit_id) updateData.unit_id = unit_id;
     if (product_id) updateData.product_id = product_id;
     if (inventory_id) updateData.inventory_id = inventory_id;
+    if (method) updateData.method = method;
     
     // Update stock record
     await stock.update(updateData);
@@ -328,15 +329,23 @@ const getStockByProduct = async (req, res) => {
     }
     
     const stock = await Stock.findAll({
+      attributes: ['product_id', 'inventory_id', 'unit_id', [fn('SUM', col('stockQuantity')), 'stockQuantity']],
       where: { product_id: productId },
-      include: getStockIncludes(),
-      order: [['createdAt', 'DESC']]
+      include: getAggregatedIncludes(),
+      group: ['Stock.product_id', 'Stock.inventory_id', 'Stock.unit_id', 'product.id', 'inventory.id', 'unit.id'],
+      order: [[fn('SUM', col('stockQuantity')), 'DESC']]
+    });
+
+    const aggregated = stock.map(r => {
+      const row = r.toJSON ? r.toJSON() : r;
+      row.stockQuantity = Number(row.stockQuantity);
+      return row;
     });
     
     res.status(200).json({
       success: true,
       message: `Stock records for product '${product.productName}' retrieved successfully`,
-      data: stock
+      data: aggregated
     });
   } catch (error) {
     console.error('Error fetching stock by product:', error);
@@ -363,15 +372,23 @@ const getStockByInventory = async (req, res) => {
     }
     
     const stock = await Stock.findAll({
+      attributes: ['product_id', 'inventory_id', 'unit_id', [fn('SUM', col('stockQuantity')), 'stockQuantity']],
       where: { inventory_id: inventoryId },
       include: getStockIncludes(),
-      order: [['createdAt', 'DESC']]
+      group: ['Stock.product_id', 'Stock.inventory_id', 'Stock.unit_id', 'product.id', 'product->productUnits.id', 'product->productUnits->unit.id', 'inventory.id', 'unit.id'],
+      order: [[fn('SUM', col('stockQuantity')), 'DESC']]
+    });
+
+    const aggregated = stock.map(r => {
+      const row = r.toJSON ? r.toJSON() : r;
+      row.stockQuantity = Number(row.stockQuantity);
+      return row;
     });
     
     res.status(200).json({
       success: true,
       message: `Stock records for inventory '${inventory.inventoryName}' retrieved successfully`,
-      data: stock
+      data: aggregated
     });
   } catch (error) {
     console.error('Error fetching stock by inventory:', error);
@@ -387,13 +404,20 @@ const getStockByInventory = async (req, res) => {
 const getLowStock = async (req, res) => {
   try {
     const { threshold = 10 } = req.query;
+    const th = parseFloat(threshold);
     
     const lowStock = await Stock.findAll({
-      where: {
-        stockQuantity: { [Op.lt]: parseFloat(threshold) }
-      },
+      attributes: ['product_id', 'inventory_id', 'unit_id', [fn('SUM', col('stockQuantity')), 'stockQuantity']],
       include: getStockIncludes(),
-      order: [['stockQuantity', 'ASC'], [{ model: Unit, as: 'unit' }, 'name', 'ASC']]
+      group: ['Stock.product_id', 'Stock.inventory_id', 'Stock.unit_id', 'product.id', 'product->productUnits.id', 'product->productUnits->unit.id', 'inventory.id', 'unit.id'],
+      having: where(fn('SUM', col('stockQuantity')), Op.lt, th),
+      order: [[fn('SUM', col('stockQuantity')), 'ASC'], [{ model: Unit, as: 'unit' }, 'name', 'ASC']]
+    });
+
+    const aggregated = lowStock.map(r => {
+      const row = r.toJSON ? r.toJSON() : r;
+      row.stockQuantity = Number(row.stockQuantity);
+      return row;
     });
     
     res.status(200).json({

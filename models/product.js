@@ -42,7 +42,7 @@ module.exports = (sequelize, DataTypes) => {
     },
 
     description: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT('long'),
       allowNull: true
     },
     category_id: {

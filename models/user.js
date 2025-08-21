@@ -29,7 +29,7 @@ module.exports = (sequelize, DataTypes) => {
       autoIncrement: true
     },
     fullname: {
-      type: DataTypes.STRING(16),
+      type: DataTypes.STRING(255),
       allowNull: false
     },
     email: {
@@ -41,7 +41,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     password: {
-      type: DataTypes.STRING(255),
+      type: DataTypes.TEXT,
       allowNull: false
     },
     role: {

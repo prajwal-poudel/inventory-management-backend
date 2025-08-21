@@ -14,6 +14,11 @@ module.exports = {
         allowNull: false,
         defaultValue: 0
       },
+      method: {
+        type: Sequelize.ENUM('transfer', 'supplier'),
+        allowNull: false,
+        defaultValue: 'supplier'
+      },
       unit_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
@@ -69,11 +74,7 @@ module.exports = {
       name: 'stock_inventory_id_idx'
     });
 
-    // Add composite unique index to prevent duplicate stock entries for same product-inventory-unit combination
-    await queryInterface.addIndex('stock', ['product_id', 'inventory_id', 'unit_id'], {
-      unique: true,
-      name: 'stock_product_inventory_unit_unique'
-    });
+    // Note: duplicates allowed now, so composite unique index has been removed
   },
 
   async down(queryInterface, Sequelize) {
