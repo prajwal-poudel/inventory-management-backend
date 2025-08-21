@@ -21,11 +21,20 @@ function getDateRange(period) {
       start.setDate(start.getDate() - 6);
       break;
     case 'monthly':
-      // current calendar month
+      // current calendar month to date
       start.setDate(1);
       break;
+    case 'yearly':
+      // current calendar year to date
+      start.setMonth(0, 1); // Jan 1st
+      start.setHours(0, 0, 0, 0);
+      break;
+    case 'all':
+      // all time
+      start.setTime(0); // 1970-01-01
+      break;
     default:
-      throw new Error('Invalid period. Use daily, weekly, or monthly');
+      throw new Error('Invalid period. Use daily, weekly, monthly, yearly, or all');
   }
   return { start, end };
 }
@@ -67,7 +76,7 @@ const getInventorySummary = async (req, res) => {
   try {
     const { period, inventoryId } = req.query;
     if (!period) {
-      return res.status(400).json({ success: false, message: 'Query param \'period\' is required (daily|weekly|monthly)' });
+      return res.status(400).json({ success: false, message: "Query param 'period' is required (daily|weekly|monthly|yearly|all)" });
     }
 
     // Authorization and accessible inventories

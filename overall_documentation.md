@@ -2344,7 +2344,7 @@ Authorization: Bearer <token>
 ```
 
 **Query Parameters:**
-- **period**: `daily` | `weekly` | `monthly` (required)
+- **period**: `daily` | `weekly` | `monthly` | `yearly` | `all` (required)
 - **inventoryId**: number (optional)
 
 **Notes:**
@@ -2353,7 +2353,9 @@ Authorization: Bearer <token>
 - Period definitions:
   - daily: today (00:00–23:59:59)
   - weekly: last 7 days inclusive ending today
-  - monthly: current calendar month
+  - monthly: current calendar month to date
+  - yearly: current calendar year to date
+  - all: all time (from 1970-01-01 to now)
 
 **Response (200):**
 ```json
