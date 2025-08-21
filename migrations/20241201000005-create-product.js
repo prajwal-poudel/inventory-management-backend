@@ -14,7 +14,7 @@ module.exports = {
         allowNull: false
       },
       description: {
-        type: Sequelize.STRING(255),
+        type: Sequelize.TEXT('long'),
         allowNull: true
       },
       category_id: {

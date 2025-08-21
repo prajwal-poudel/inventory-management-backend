@@ -35,6 +35,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0
     },
+    method: {
+      // Indicates how stock moved in/out of inventory
+      type: DataTypes.ENUM('transfer', 'supplier'),
+      allowNull: false,
+      defaultValue: 'supplier'
+    },
     unit_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
