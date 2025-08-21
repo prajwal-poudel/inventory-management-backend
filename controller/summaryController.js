@@ -9,7 +9,6 @@ function getDateRange(period) {
   end.setSeconds(59);
   end.setMinutes(59);
   end.setHours(23);
-
   const start = new Date(now);
   start.setHours(0, 0, 0, 0);
 
