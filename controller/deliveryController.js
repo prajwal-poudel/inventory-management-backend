@@ -1,4 +1,4 @@
-const { Delivery, Order, Driver } = require('../models');
+const { Delivery, Order, Driver, User } = require('../models');
 
 // Get all deliveries
 const getAllDeliveries = async (req, res) => {
@@ -13,7 +13,14 @@ const getAllDeliveries = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
@@ -49,7 +56,14 @@ const getDeliveryById = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ]
     });
@@ -133,7 +147,14 @@ const createDelivery = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ]
     });
@@ -223,7 +244,14 @@ const updateDelivery = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ]
     });
@@ -299,15 +327,28 @@ const getDeliveriesByDriver = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ],
       order: [['createdAt', 'DESC']]
     });
     
+    // Re-fetch driver with user to display proper name in message
+    const driverWithUser = await Driver.findByPk(driverId, {
+      include: [{ model: User, as: 'user', attributes: ['fullname'] }]
+    });
+    const driverName = driverWithUser && driverWithUser.user ? driverWithUser.user.fullname : `ID ${driverId}`;
+
     res.status(200).json({
       success: true,
-      message: `Deliveries for driver '${driver.fullname}' retrieved successfully`,
+      message: `Deliveries for driver '${driverName}' retrieved successfully`,
       data: deliveries
     });
   } catch (error) {
@@ -345,7 +386,14 @@ const getDeliveryByOrder = async (req, res) => {
         {
           model: Driver,
           as: 'driver',
-          attributes: ['id', 'fullname', 'phoneNumber']
+          attributes: ['id', 'phoneNumber', 'user_id'],
+          include: [
+            {
+              model: User,
+              as: 'user',
+              attributes: ['id', 'fullname', 'email']
+            }
+          ]
         }
       ]
     });
