@@ -1435,7 +1435,7 @@
                 "stockQuantity": {
                   "example": "any"
                 },
-                "unit": {
+                "unit_id": {
                   "example": "any"
                 },
                 "product_id": {
@@ -1481,16 +1481,6 @@
           {
             "name": "authorization",
             "in": "header",
-            "type": "string"
-          },
-          {
-            "name": "kgThreshold",
-            "in": "query",
-            "type": "string"
-          },
-          {
-            "name": "boriThreshold",
-            "in": "query",
             "type": "string"
           },
           {
@@ -1601,7 +1591,7 @@
                 "stockQuantity": {
                   "example": "any"
                 },
-                "unit": {
+                "unit_id": {
                   "example": "any"
                 },
                 "product_id": {
@@ -2071,7 +2061,7 @@
                     "productId",
                     "inventoryId",
                     "quantity",
-                    "unit"
+                    "unit_id"
                   ],
                   "items": {
                     "type": "string"
@@ -2132,16 +2122,16 @@
                         }
                       }
                     },
-                    "unit": {
+                    "unit_id": {
                       "type": "object",
                       "properties": {
                         "type": {
                           "type": "string",
-                          "example": "string"
+                          "example": "integer"
                         },
                         "example": {
-                          "type": "string",
-                          "example": "KG"
+                          "type": "number",
+                          "example": 1
                         }
                       }
                     },
@@ -2394,7 +2384,7 @@
                 "quantity": {
                   "example": "any"
                 },
-                "unit": {
+                "unit_id": {
                   "example": "any"
                 },
                 "status": {
@@ -3569,6 +3559,52 @@
             "description": "Internal Server Error"
           }
         }
+      }
+    },
+    "/api/summary/": {
+      "get": {
+        "tags": [
+          "Summary"
+        ],
+        "summary": "Get stock and sales summary",
+        "description": "Returns aggregated sales (orders) and current stock by inventory for the requested period.",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          },
+          {
+            "name": "period",
+            "in": "query",
+            "description": "Aggregation period (daily|weekly|monthly)",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "inventoryId",
+            "in": "query",
+            "description": "Specific inventory ID (admins must manage it; superadmins can access any). If omitted: admins -> all they manage; superadmin -> all inventories",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     }
   },

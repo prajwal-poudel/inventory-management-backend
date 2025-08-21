@@ -2327,6 +2327,78 @@ Authorization: Bearer <token>
 
 ---
 
+## Summary Routes
+
+### 1. Get Stock and Sales Summary
+**GET** `/summary`
+
+Generate aggregated sales and current stock summaries per inventory for a given period.
+
+- **Access Control**:
+  - **superadmin**: can view all inventories or a specific one via `inventoryId`.
+  - **admin**: can view only the inventories they manage; if `inventoryId` is provided, they must manage it.
+
+**Headers:**
+```
+Authorization: Bearer <token>
+```
+
+**Query Parameters:**
+- **period**: `daily` | `weekly` | `monthly` (required)
+- **inventoryId**: number (optional)
+
+**Notes:**
+- Sales exclude orders with status `cancelled`.
+- Stock is a current snapshot from the stock table.
+- Period definitions:
+  - daily: today (00:00–23:59:59)
+  - weekly: last 7 days inclusive ending today
+  - monthly: current calendar month
+
+**Response (200):**
+```json
+{
+  "success": true,
+  "message": "Summary generated successfully",
+  "data": {
+    "period": "weekly",
+    "range": { "start": "2025-08-14T00:00:00.000Z", "end": "2025-08-20T23:59:59.999Z" },
+    "inventories": [
+      {
+        "inventoryId": 1,
+        "inventoryName": "Main Warehouse",
+        "sales": {
+          "totals": { "orders": 12, "quantity": 250, "revenue": 3450.5 },
+          "byProduct": [
+            {
+              "productId": 10,
+              "productName": "Cement",
+              "unit": { "id": 2, "name": "Bag" },
+              "quantitySold": 150,
+              "orders": 7,
+              "revenue": 2100
+            }
+          ]
+        },
+        "stock": {
+          "snapshotAt": "2025-08-20T12:34:56.789Z",
+          "totals": { "items": 8, "totalQuantity": 970 },
+          "byProduct": [
+            { "productId": 10, "productName": "Cement", "unit": { "id": 2, "name": "Bag" }, "stockQuantity": 300 }
+          ]
+        }
+      }
+    ]
+  }
+}
+```
+
+**Errors:**
+- 400 Bad Request: missing or invalid `period`.
+- 403 Forbidden: admin requesting inventory they do not manage, or non-admin user.
+
+---
+
 ## Database Relationships
 
 ### Key Relationships:
