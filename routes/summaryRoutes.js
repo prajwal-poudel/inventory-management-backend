@@ -4,7 +4,7 @@ const { getInventorySummary } = require('../controller/summaryController');
 const { authenticateToken, requireAdmin } = require('../middleware/authMiddleware');
 
 // GET /api/summary
-// Query: period=daily|weekly|monthly, inventoryId=optional
+// Query: period=daily|weekly|monthly|yearly|all, inventoryId=optional
 // Access: admin (only their managed inventories) and superadmin (all inventories or specific via inventoryId)
 router.get('/',
   // #swagger.tags = ['Summary']
@@ -13,7 +13,7 @@ router.get('/',
   // #swagger.security = [{ "bearerAuth": [] }]
   /* #swagger.parameters['period'] = {
       in: 'query',
-      description: 'Aggregation period (daily|weekly|monthly)',
+      description: 'Aggregation period (daily|weekly|monthly|yearly|all)',
       required: true,
       type: 'string'
   } */
