@@ -1,4 +1,70 @@
 const { Order, Customer, Product, Delivery, Inventory, User, Stock, ProductUnits, Unit, Driver } = require('../models');
+const { Op } = require('sequelize');
+
+// Helper function to calculate available stock for a product in an inventory with specific unit
+const calculateAvailableStock = async (productId, inventoryId, unitId) => {
+  try {
+    // Get all stock records for this product, inventory, and unit combination
+    const stockRecords = await Stock.findAll({
+      where: {
+        product_id: productId,
+        inventory_id: inventoryId,
+        unit_id: unitId
+      },
+      attributes: ['stockQuantity', 'in_out', 'method'],
+      order: [['createdAt', 'ASC']]
+    });
+
+    if (!stockRecords || stockRecords.length === 0) {
+      return {
+        available: 0,
+        totalIn: 0,
+        totalOut: 0,
+        records: 0
+      };
+    }
+
+    let totalIn = 0;
+    let totalOut = 0;
+
+    // Calculate total stock in and out
+    stockRecords.forEach(record => {
+      if (record.in_out === 'in') {
+        totalIn += parseFloat(record.stockQuantity);
+      } else if (record.in_out === 'out') {
+        totalOut += parseFloat(record.stockQuantity);
+      }
+    });
+
+    const available = totalIn - totalOut;
+
+    return {
+      available: Math.max(0, available), // Ensure we don't return negative stock
+      totalIn,
+      totalOut,
+      records: stockRecords.length
+    };
+  } catch (error) {
+    console.error('Error calculating available stock:', error);
+    throw new Error('Failed to calculate available stock');
+  }
+};
+
+// Helper function to validate stock availability for order creation
+const validateStockAvailability = async (productId, inventoryId, unitId, requestedQuantity) => {
+  try {
+    const stockAvailability = await calculateAvailableStock(productId, inventoryId, unitId);
+    
+    return {
+      isAvailable: stockAvailability.available >= requestedQuantity,
+      stockDetails: stockAvailability,
+      shortfall: Math.max(0, requestedQuantity - stockAvailability.available)
+    };
+  } catch (error) {
+    console.error('Error validating stock availability:', error);
+    throw new Error('Failed to validate stock availability');
+  }
+};
 
 // Helper function to get standard includes for order queries
 const getOrderIncludes = () => [
@@ -231,27 +297,29 @@ const createOrder = async (req, res) => {
       });
     }
     
-    // Check stock availability
-    const stockRecord = await Stock.findOne({
-      where: {
-        product_id: productId,
-        inventory_id: inventoryId,
-        unit_id: unit_id
-      }
-    });
+    // Check stock availability using the new helper function
+    const stockValidation = await validateStockAvailability(productId, inventoryId, unit_id, quantity);
     
-    if (!stockRecord) {
+    if (stockValidation.stockDetails.records === 0) {
       return res.status(404).json({
         success: false,
-        message: `No stock record found for this product in the specified inventory with unit ${unitRecord.name}`
+        message: `No stock records found for product '${product.productName}' in inventory '${inventory.inventoryName}' with unit '${unitRecord.name}'`
       });
     }
     
     // Check if sufficient stock is available
-    if (stockRecord.stockQuantity < quantity) {
+    if (!stockValidation.isAvailable) {
       return res.status(400).json({
         success: false,
-        message: `Insufficient stock. Available: ${stockRecord.stockQuantity} ${unitRecord.name}, Requested: ${quantity} ${unitRecord.name}`
+        message: `Insufficient stock. Available: ${stockValidation.stockDetails.available} ${unitRecord.name}, Requested: ${quantity} ${unitRecord.name}, Shortfall: ${stockValidation.shortfall} ${unitRecord.name}`,
+        stockDetails: {
+          totalStockIn: stockValidation.stockDetails.totalIn,
+          totalStockOut: stockValidation.stockDetails.totalOut,
+          availableStock: stockValidation.stockDetails.available,
+          requestedQuantity: quantity,
+          shortfall: stockValidation.shortfall,
+          unit: unitRecord.name
+        }
       });
     }
     
@@ -273,9 +341,14 @@ const createOrder = async (req, res) => {
         totalAmount
       }, { transaction });
       
-      // Update stock quantity
-      await stockRecord.update({
-        stockQuantity: stockRecord.stockQuantity - quantity
+      // Create a stock record to track the order (stock going out)
+      await Stock.create({
+        stockQuantity: quantity, // Positive quantity with 'out' indicator
+        method: 'order',
+        in_out: 'out', // Properly indicate this is stock going out
+        unit_id: unit_id,
+        product_id: productId,
+        inventory_id: inventoryId
       }, { transaction });
       
       // Commit the transaction
@@ -333,10 +406,15 @@ const createOrder = async (req, res) => {
             formula: `${productUnit.rate} × ${quantity} = ${totalAmount}`
           },
           stockUpdate: {
-            previousStock: stockRecord.stockQuantity + quantity,
-            currentStock: stockRecord.stockQuantity,
+            previousAvailableStock: stockValidation.stockDetails.available,
+            currentAvailableStock: stockValidation.stockDetails.available - quantity,
             quantityUsed: quantity,
-            unit: unitRecord.name
+            unit: unitRecord.name,
+            stockDetails: {
+              totalStockIn: stockValidation.stockDetails.totalIn,
+              totalStockOut: stockValidation.stockDetails.totalOut + quantity,
+              newAvailableStock: stockValidation.stockDetails.available - quantity
+            }
           }
         }
       });
@@ -683,5 +761,8 @@ module.exports = {
   getOrdersByCustomer,
   getOrdersByStatus,
   getOrdersByInventory,
-  updateOrderStatus
+  updateOrderStatus,
+  // Helper functions for stock management
+  calculateAvailableStock,
+  validateStockAvailability
 };

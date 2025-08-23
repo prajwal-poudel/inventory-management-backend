@@ -15,9 +15,14 @@ module.exports = {
         defaultValue: 0
       },
       method: {
-        type: Sequelize.ENUM('transfer', 'supplier'),
+        type: Sequelize.ENUM('transfer', 'supplier','damage','order'),
         allowNull: false,
         defaultValue: 'supplier'
+      },
+      in_out: {
+        type: Sequelize.ENUM('in', 'out'),
+        allowNull: false,
+        defaultValue: 'in'
       },
       unit_id: {
         type: Sequelize.INTEGER,

@@ -21,6 +21,18 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'inventoryId',
         as: 'orders'
       });
+      
+      // Inventory has many outgoing stock transfers (as source)
+      Inventory.hasMany(models.StockTransfer, {
+        foreignKey: 'sourceInventory_id',
+        as: 'outgoingTransfers'
+      });
+      
+      // Inventory has many incoming stock transfers (as target)
+      Inventory.hasMany(models.StockTransfer, {
+        foreignKey: 'targetInventory_id',
+        as: 'incomingTransfers'
+      });
     }
   }
   

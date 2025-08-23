@@ -8,7 +8,9 @@ const {
   deleteStock,
   getStockByProduct,
   getStockByInventory,
-  getLowStock
+  getLowStock,
+  getStockMovementsByOrder,
+  getAllOrderStockMovements
 } = require('../controller/stockController');
 
 const {

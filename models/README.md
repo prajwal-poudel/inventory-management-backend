@@ -128,15 +128,40 @@ This document describes the Sequelize models created for the inventory managemen
   - Belongs to `Order`
   - Belongs to `Driver`
 
+### 12. StockTransfer Model (`stocktransfer.js`) ⭐ **NEW**
+- **Purpose**: Tracks stock movements between inventories
+- **Fields**:
+  - `id` (INT, Primary Key, Auto Increment)
+  - `stock_id` (INT, Foreign Key)
+  - `fromInventory_id` (INT, Foreign Key)
+  - `toInventory_id` (INT, Foreign Key)
+  - `transferQuantity` (DOUBLE)
+  - `transferDate` (DATETIME, Default: NOW)
+  - `status` (ENUM: 'pending', 'in_transit', 'completed', 'cancelled')
+  - `notes` (TEXT, Optional)
+  - `transferredBy` (INT, Foreign Key, Optional)
+- **Relationships**:
+  - Belongs to `Stock` (as 'stock')
+  - Belongs to `Inventory` (as 'fromInventory')
+  - Belongs to `Inventory` (as 'toInventory')
+  - Belongs to `User` (as 'transferredByUser')
+- **Reverse Relationships**:
+  - `Stock` has many `StockTransfer` (as 'transfers')
+  - `Inventory` has many outgoing `StockTransfer` (as 'outgoingTransfers')
+  - `Inventory` has many incoming `StockTransfer` (as 'incomingTransfers')
+  - `User` has many `StockTransfer` (as 'initiatedTransfers')
+
 ## Key Features
 
 1. **Automatic Timestamps**: All models include `createdAt` and `updatedAt` timestamps
 2. **Foreign Key Constraints**: Proper relationships with referential integrity
-3. **Validation**: Email validation for user model, unit validation for orders
+3. **Validation**: Email validation for user model, unit validation for orders, stock transfer validation
 4. **Associations**: Proper Sequelize associations for easy querying
 5. **Indexes**: Primary keys and foreign keys are properly indexed
+6. **⭐ Stock Transfer System**: Complete inter-inventory stock movement tracking with status management
+7. **Rich Relationships**: Complex associations supporting multiple inventory transfers and audit trails
 
-## Usage Example
+## Usage Examples
 
 ```javascript
 const db = require('./models');
@@ -170,13 +195,89 @@ const orders = await db.Order.findAll({
     }
   ]
 });
+
+// ⭐ NEW: Get stock transfers with all related data
+const stockTransfers = await db.StockTransfer.findAll({
+  include: [
+    {
+      model: db.Stock,
+      as: 'stock',
+      include: [
+        { model: db.Product, as: 'product' },
+        { model: db.Unit, as: 'unit' }
+      ]
+    },
+    { model: db.Inventory, as: 'fromInventory' },
+    { model: db.Inventory, as: 'toInventory' },
+    { model: db.User, as: 'transferredByUser' }
+  ]
+});
+
+// ⭐ NEW: Get inventory with all incoming and outgoing transfers
+const inventoryWithTransfers = await db.Inventory.findByPk(1, {
+  include: [
+    {
+      model: db.StockTransfer,
+      as: 'outgoingTransfers',
+      include: [
+        { model: db.Stock, as: 'stock' },
+        { model: db.Inventory, as: 'toInventory' }
+      ]
+    },
+    {
+      model: db.StockTransfer,
+      as: 'incomingTransfers',
+      include: [
+        { model: db.Stock, as: 'stock' },
+        { model: db.Inventory, as: 'fromInventory' }
+      ]
+    }
+  ]
+});
+
+// ⭐ NEW: Get stock with transfer history
+const stockWithTransfers = await db.Stock.findByPk(1, {
+  include: [
+    { model: db.Product, as: 'product' },
+    { model: db.Inventory, as: 'inventory' },
+    {
+      model: db.StockTransfer,
+      as: 'transfers',
+      include: [
+        { model: db.Inventory, as: 'fromInventory' },
+        { model: db.Inventory, as: 'toInventory' },
+        { model: db.User, as: 'transferredByUser' }
+      ]
+    }
+  ]
+});
 ```
 
 ## Database Setup
 
 Make sure to:
 1. Create the MySQL database named 'inventory'
-2. Run migrations to create the tables
+2. Run migrations to create the tables (including the new StockTransfer table)
 3. Seed the database with initial data if needed
 
-The models are now ready to be used with your Express.js application!
+```bash
+# Run all migrations (including StockTransfer)
+npx sequelize-cli db:migrate
+
+# Seed with sample data (including StockTransfer examples)
+npx sequelize-cli db:seed:all
+
+# Or seed just the StockTransfer data
+npx sequelize-cli db:seed --seed 20250813163337-demo-stock-transfer.js
+```
+
+## Recent Updates ⭐
+
+### StockTransfer System Added
+- **New Model**: `StockTransfer` for tracking inter-inventory stock movements
+- **New Migration**: Creates `stock_transfer` table with proper relationships
+- **Enhanced Associations**: Updated existing models with transfer relationships
+- **Sample Data**: Seeder for demonstration and testing
+- **Status Management**: Tracks transfer lifecycle (pending → in_transit → completed/cancelled)
+
+The models are now ready to be used with your Express.js application with full stock transfer capabilities!

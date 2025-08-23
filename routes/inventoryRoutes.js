@@ -37,18 +37,17 @@ router.get('/:id/stats',
   // #swagger.tags = ['Inventory']
   authenticateToken, getInventoryStats);
 
-// Admin only routes
-// POST /api/inventories - Create new inventory (admin only)
+// Super admin only routes
+// POST /api/inventories - Create new inventory (super admin only)
 router.post('/',
   // #swagger.tags = ['Inventory']
-  authenticateToken, requireAdmin, createInventory);
+  authenticateToken, requireSuperAdmin, createInventory);
 
-// PUT /api/inventories/:id - Update inventory (admin only)
+// PUT /api/inventories/:id - Update inventory (super admin only)
 router.put('/:id',
   // #swagger.tags = ['Inventory']
-  authenticateToken, requireAdmin, updateInventory);
+  authenticateToken, requireSuperAdmin, updateInventory);
 
-// Super admin only routes
 // DELETE /api/inventories/:id - Delete inventory (super admin only)
 router.delete('/:id',
   // #swagger.tags = ['Inventory']

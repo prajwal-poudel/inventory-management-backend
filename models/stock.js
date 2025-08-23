@@ -21,6 +21,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'unit_id',
         as: 'unit'
       });
+      
+      // Stock has many transfers
+      Stock.hasMany(models.StockTransfer, {
+        foreignKey: 'stock_id',
+        as: 'transfers'
+      });
     }
   }
   
@@ -37,9 +43,15 @@ module.exports = (sequelize, DataTypes) => {
     },
     method: {
       // Indicates how stock moved in/out of inventory
-      type: DataTypes.ENUM('transfer', 'supplier'),
+      type: DataTypes.ENUM('transfer', 'supplier','damage','order'),
       allowNull: false,
       defaultValue: 'supplier'
+    },
+    in_out: {
+      // Indicates how stock moved in/out of inventory
+      type: DataTypes.ENUM('in', 'out'),
+      allowNull: false,
+      defaultValue: 'in'
     },
     unit_id: {
       type: DataTypes.INTEGER,
