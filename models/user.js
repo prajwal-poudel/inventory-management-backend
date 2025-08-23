@@ -19,6 +19,12 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'orderVerifiedBy',
         as: 'verifiedOrders'
       });
+      
+      // User can initiate stock transfers
+      User.hasMany(models.StockTransfer, {
+        foreignKey: 'transferredBy',
+        as: 'initiatedTransfers'
+      });
     }
   }
   

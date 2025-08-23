@@ -3,7 +3,38 @@ const { Inventory, Manages, User, Stock, Product, Unit } = require('../models');
 // Get all inventories
 const getAllInventories = async (req, res) => {
   try {
+    const { user } = req;
+    let whereClause = {};
+    
+    // If user is admin, only show inventories they manage
+    // If user is superadmin, show all inventories
+    if (user.role === 'admin') {
+      // Get inventory IDs that this admin manages
+      const managedInventories = await Manages.findAll({
+        where: { user_id: user.id },
+        attributes: ['inventory_id']
+      });
+      
+      const inventoryIds = managedInventories.map(m => m.inventory_id);
+      
+      if (inventoryIds.length === 0) {
+        // Admin doesn't manage any inventories
+        return res.status(200).json({
+          success: true,
+          message: 'Inventories retrieved successfully',
+          data: []
+        });
+      }
+      
+      whereClause = {
+        id: {
+          [require('sequelize').Op.in]: inventoryIds
+        }
+      };
+    }
+    
     const inventories = await Inventory.findAll({
+      where: whereClause,
       include: [
         {
           model: Manages,
@@ -55,6 +86,24 @@ const getAllInventories = async (req, res) => {
 const getInventoryById = async (req, res) => {
   try {
     const { id } = req.params;
+    const { user } = req;
+    
+    // If user is admin, check if they manage this inventory
+    if (user.role === 'admin') {
+      const managesInventory = await Manages.findOne({
+        where: { 
+          user_id: user.id,
+          inventory_id: id 
+        }
+      });
+      
+      if (!managesInventory) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only access inventories you manage.'
+        });
+      }
+    }
     
     const inventory = await Inventory.findByPk(id, {
       include: [
@@ -109,6 +158,15 @@ const getInventoryById = async (req, res) => {
 const createInventory = async (req, res) => {
   try {
     const { inventoryName, address, contactNumber } = req.body;
+    const { user } = req;
+    
+    // Only superadmin can create inventories
+    if (user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only superadmin can create inventories.'
+      });
+    }
     
     // Validate required fields
     if (!inventoryName || !address || !contactNumber) {
@@ -154,6 +212,15 @@ const updateInventory = async (req, res) => {
   try {
     const { id } = req.params;
     const { inventoryName, address, contactNumber } = req.body;
+    const { user } = req;
+    
+    // Only superadmin can update inventories
+    if (user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only superadmin can update inventories.'
+      });
+    }
     
     // Check if inventory exists
     const inventory = await Inventory.findByPk(id);
@@ -220,6 +287,15 @@ const updateInventory = async (req, res) => {
 const deleteInventory = async (req, res) => {
   try {
     const { id } = req.params;
+    const { user } = req;
+    
+    // Only superadmin can delete inventories
+    if (user.role !== 'superadmin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only superadmin can delete inventories.'
+      });
+    }
     
     // Check if inventory exists
     const inventory = await Inventory.findByPk(id);
@@ -269,6 +345,7 @@ const deleteInventory = async (req, res) => {
 const searchInventories = async (req, res) => {
   try {
     const { query } = req.query;
+    const { user } = req;
     
     if (!query) {
       return res.status(400).json({
@@ -277,21 +354,55 @@ const searchInventories = async (req, res) => {
       });
     }
     
-    const inventories = await Inventory.findAll({
-      where: {
-        [require('sequelize').Op.or]: [
+    let whereClause = {
+      [require('sequelize').Op.or]: [
+        {
+          inventoryName: {
+            [require('sequelize').Op.like]: `%${query}%`
+          }
+        },
+        {
+          address: {
+            [require('sequelize').Op.like]: `%${query}%`
+          }
+        }
+      ]
+    };
+    
+    // If user is admin, only search inventories they manage
+    if (user.role === 'admin') {
+      // Get inventory IDs that this admin manages
+      const managedInventories = await Manages.findAll({
+        where: { user_id: user.id },
+        attributes: ['inventory_id']
+      });
+      
+      const inventoryIds = managedInventories.map(m => m.inventory_id);
+      
+      if (inventoryIds.length === 0) {
+        // Admin doesn't manage any inventories
+        return res.status(200).json({
+          success: true,
+          message: 'Inventory search completed successfully',
+          data: []
+        });
+      }
+      
+      // Add inventory ID filter to existing search conditions
+      whereClause = {
+        [require('sequelize').Op.and]: [
+          whereClause,
           {
-            inventoryName: {
-              [require('sequelize').Op.like]: `%${query}%`
-            }
-          },
-          {
-            address: {
-              [require('sequelize').Op.like]: `%${query}%`
+            id: {
+              [require('sequelize').Op.in]: inventoryIds
             }
           }
         ]
-      },
+      };
+    }
+    
+    const inventories = await Inventory.findAll({
+      where: whereClause,
       include: [
         {
           model: Manages,
@@ -327,6 +438,24 @@ const searchInventories = async (req, res) => {
 const getInventoryStats = async (req, res) => {
   try {
     const { id } = req.params;
+    const { user } = req;
+    
+    // If user is admin, check if they manage this inventory
+    if (user.role === 'admin') {
+      const managesInventory = await Manages.findOne({
+        where: { 
+          user_id: user.id,
+          inventory_id: id 
+        }
+      });
+      
+      if (!managesInventory) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only access statistics for inventories you manage.'
+        });
+      }
+    }
     
     // Check if inventory exists
     const inventory = await Inventory.findByPk(id);

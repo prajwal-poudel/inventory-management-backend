@@ -1443,6 +1443,21 @@
                 },
                 "inventory_id": {
                   "example": "any"
+                },
+                "method": {
+                  "example": "any"
+                },
+                "in_out": {
+                  "example": "any"
+                },
+                "targetInventoryId": {
+                  "example": "any"
+                },
+                "transferredBy": {
+                  "example": "any"
+                },
+                "notes": {
+                  "example": "any"
                 }
               }
             }
@@ -1460,9 +1475,6 @@
           },
           "404": {
             "description": "Not Found"
-          },
-          "409": {
-            "description": "Conflict"
           },
           "500": {
             "description": "Internal Server Error"
@@ -1599,6 +1611,12 @@
                 },
                 "inventory_id": {
                   "example": "any"
+                },
+                "method": {
+                  "example": "any"
+                },
+                "in_out": {
+                  "example": "any"
                 }
               }
             }
@@ -1616,9 +1634,6 @@
           },
           "404": {
             "description": "Not Found"
-          },
-          "409": {
-            "description": "Conflict"
           },
           "500": {
             "description": "Internal Server Error"
@@ -3577,7 +3592,7 @@
           {
             "name": "period",
             "in": "query",
-            "description": "Aggregation period (daily|weekly|monthly)",
+            "description": "Aggregation period (daily|weekly|monthly|yearly|all)",
             "required": true,
             "type": "string"
           },

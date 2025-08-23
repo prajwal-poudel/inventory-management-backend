@@ -56,7 +56,8 @@ app.get("/", (req, res) => {
             drivers: "/api/drivers",
             deliveries: "/api/deliveries",
             units: "/api/units",
-            productUnits: "/api/product-units"
+            productUnits: "/api/product-units",
+            
         }
     });
 });
