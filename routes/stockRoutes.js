@@ -8,9 +8,11 @@ const {
   deleteStock,
   getStockByProduct,
   getStockByInventory,
+  getStockByInventoryStructured,
   getLowStock,
-  getStockMovementsByOrder,
-  getAllOrderStockMovements
+  getStockSummaryByProduct,
+  getStockSummaryByInventory,
+  updateStockQuantity
 } = require('../controller/stockController');
 
 const {
@@ -72,6 +74,54 @@ router.get('/product/:productId',
 router.get('/inventory/:inventoryId',
   // #swagger.tags = ['Stock']
   authenticateToken, getStockByInventory);
+
+// GET /api/stock/structured - Get stock organized by inventory with products and units
+router.get('/structured',
+  // #swagger.tags = ['Stock']
+  // #swagger.summary = 'Get stock organized by inventory'
+  // #swagger.description = 'Retrieve stock data organized by inventory, with products and their stock per unit'
+  // #swagger.security = [{ "bearerAuth": [] }]
+  /* #swagger.responses[200] = {
+    description: 'Stock records organized by inventory retrieved successfully',
+    schema: {
+      success: true,
+      message: 'Stock records organized by inventory retrieved successfully',
+      data: [{
+        id: 1,
+        inventoryName: 'Main Warehouse',
+        address: '123 Main St',
+        contactNumber: '+1234567890',
+        products: [{
+          id: 1,
+          productName: 'Product A',
+          description: 'Product description',
+          stockByUnit: [{
+            unit: { id: 1, name: 'kg' },
+            totalIncoming: 100,
+            totalOutgoing: 20,
+            availableQuantity: 80
+          }]
+        }]
+      }]
+    }
+  } */
+  authenticateToken, getStockByInventoryStructured);
+
+// GET /api/stock/summary/product/:productId - Get stock summary by product
+router.get('/summary/product/:productId',
+  // #swagger.tags = ['Stock']
+  // #swagger.summary = 'Get stock summary by product'
+  // #swagger.description = 'Retrieve stock summary for a specific product across all inventories'
+  // #swagger.security = [{ "bearerAuth": [] }]
+  authenticateToken, getStockSummaryByProduct);
+
+// GET /api/stock/summary/inventory/:inventoryId - Get stock summary by inventory
+router.get('/summary/inventory/:inventoryId',
+  // #swagger.tags = ['Stock']
+  // #swagger.summary = 'Get stock summary by inventory'
+  // #swagger.description = 'Retrieve stock summary for a specific inventory across all products'
+  // #swagger.security = [{ "bearerAuth": [] }]
+  authenticateToken, getStockSummaryByInventory);
 
 // Admin only routes
 // POST /api/stock - Create new stock record (admin only)

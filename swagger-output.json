@@ -378,6 +378,9 @@
               "$ref": "#/definitions/ErrorResponse"
             }
           },
+          "404": {
+            "description": "Not Found"
+          },
           "409": {
             "description": "Conflict"
           },
@@ -497,6 +500,9 @@
                   "example": "any"
                 },
                 "role": {
+                  "example": "any"
+                },
+                "inventoryId": {
                   "example": "any"
                 }
               }
@@ -1159,6 +1165,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "409": {
             "description": "Conflict"
           },
@@ -1228,6 +1237,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1279,6 +1291,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1318,6 +1333,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1352,6 +1370,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -1473,6 +1494,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1569,6 +1593,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1632,6 +1659,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1664,6 +1694,9 @@
           },
           "401": {
             "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
           },
           "404": {
             "description": "Not Found"
@@ -1735,6 +1768,9 @@
           "401": {
             "description": "Unauthorized"
           },
+          "403": {
+            "description": "Forbidden"
+          },
           "404": {
             "description": "Not Found"
           },
@@ -1742,6 +1778,216 @@
             "description": "Internal Server Error"
           }
         }
+      }
+    },
+    "/api/stock/structured": {
+      "get": {
+        "tags": [
+          "Stock"
+        ],
+        "summary": "Get stock organized by inventory",
+        "description": "Retrieve stock data organized by inventory, with products and their stock per unit",
+        "parameters": [
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stock records organized by inventory retrieved successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "success": {
+                  "type": "boolean",
+                  "example": true
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Stock records organized by inventory retrieved successfully"
+                },
+                "data": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "number",
+                        "example": 1
+                      },
+                      "inventoryName": {
+                        "type": "string",
+                        "example": "Main Warehouse"
+                      },
+                      "address": {
+                        "type": "string",
+                        "example": "123 Main St"
+                      },
+                      "contactNumber": {
+                        "type": "string",
+                        "example": "+1234567890"
+                      },
+                      "products": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "number",
+                              "example": 1
+                            },
+                            "productName": {
+                              "type": "string",
+                              "example": "Product A"
+                            },
+                            "description": {
+                              "type": "string",
+                              "example": "Product description"
+                            },
+                            "stockByUnit": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "unit": {
+                                    "type": "object",
+                                    "properties": {
+                                      "id": {
+                                        "type": "number",
+                                        "example": 1
+                                      },
+                                      "name": {
+                                        "type": "string",
+                                        "example": "kg"
+                                      }
+                                    }
+                                  },
+                                  "totalIncoming": {
+                                    "type": "number",
+                                    "example": 100
+                                  },
+                                  "totalOutgoing": {
+                                    "type": "number",
+                                    "example": 20
+                                  },
+                                  "availableQuantity": {
+                                    "type": "number",
+                                    "example": 80
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "xml": {
+                "name": "main"
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/stock/summary/product/{productId}": {
+      "get": {
+        "tags": [
+          "Stock"
+        ],
+        "summary": "Get stock summary by product",
+        "description": "Retrieve stock summary for a specific product across all inventories",
+        "parameters": [
+          {
+            "name": "productId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/stock/summary/inventory/{inventoryId}": {
+      "get": {
+        "tags": [
+          "Stock"
+        ],
+        "summary": "Get stock summary by inventory",
+        "description": "Retrieve stock summary for a specific inventory across all products",
+        "parameters": [
+          {
+            "name": "inventoryId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "authorization",
+            "in": "header",
+            "type": "string"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "500": {
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       }
     },
     "/api/customers/": {

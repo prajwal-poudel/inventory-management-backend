@@ -834,6 +834,100 @@ const getStockSummaryByInventory = async (req, res) => {
   }
 };
 
+/**
+ * Get all stock organized by inventory with products and units
+ */
+const getStockByInventoryStructured = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    const managedInventoryIds = await getManagedInventoryIds(userId, userRole);
+    
+    if (checkAdminInventoryAccess(userRole, managedInventoryIds, res)) {
+      return;
+    }
+    
+    const whereClause = buildInventoryWhereClause(userRole, managedInventoryIds);
+    
+    // Get all stock data with aggregation
+    const stock = await Stock.findAll({
+      attributes: getStockAggregationAttributes(),
+      where: whereClause,
+      include: getAggregatedIncludes(),
+      group: getStockAggregationGroup(),
+      order: [
+        [{ model: Inventory, as: 'inventory' }, 'inventoryName', 'ASC'],
+        [{ model: Product, as: 'product' }, 'productName', 'ASC'],
+        [{ model: Unit, as: 'unit' }, 'name', 'ASC']
+      ]
+    });
+
+    const aggregated = processAggregatedStock(stock);
+    
+    // Group stock by inventory
+    const inventoryMap = new Map();
+    
+    aggregated.forEach(stockItem => {
+      const inventoryId = stockItem.inventory_id;
+      const inventory = stockItem.inventory;
+      
+      if (!inventoryMap.has(inventoryId)) {
+        inventoryMap.set(inventoryId, {
+          id: inventory.id,
+          inventoryName: inventory.inventoryName,
+          address: inventory.address,
+          contactNumber: inventory.contactNumber,
+          products: new Map()
+        });
+      }
+      
+      const inventoryData = inventoryMap.get(inventoryId);
+      const productId = stockItem.product_id;
+      const product = stockItem.product;
+      
+      if (!inventoryData.products.has(productId)) {
+        inventoryData.products.set(productId, {
+          id: product.id,
+          productName: product.productName,
+          description: product.description,
+          stockByUnit: []
+        });
+      }
+      
+      const productData = inventoryData.products.get(productId);
+      productData.stockByUnit.push({
+        unit: {
+          id: stockItem.unit.id,
+          name: stockItem.unit.name
+        },
+        totalIncoming: stockItem.totalIncoming,
+        totalOutgoing: stockItem.totalOutgoing,
+        availableQuantity: stockItem.availableQuantity
+      });
+    });
+    
+    // Convert maps to arrays for response
+    const result = Array.from(inventoryMap.values()).map(inventory => ({
+      ...inventory,
+      products: Array.from(inventory.products.values())
+    }));
+    
+    res.status(200).json({
+      success: true,
+      message: 'Stock records organized by inventory retrieved successfully',
+      data: result
+    });
+  } catch (error) {
+    console.error('Error fetching structured stock by inventory:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching structured stock by inventory',
+      error: error.message
+    });
+  }
+};
+
 // ==================== EXPORTS ====================
 
 module.exports = {
@@ -844,6 +938,7 @@ module.exports = {
   deleteStock,
   getStockByProduct,
   getStockByInventory,
+  getStockByInventoryStructured,
   getLowStock,
   getStockSummaryByProduct,
   getStockSummaryByInventory,
