@@ -1,5 +1,5 @@
 const { Stock, Product, Inventory, ProductUnits, Unit, StockTransfer, User } = require('../../models');
-const { Op, fn, col, where } = require('sequelize');
+const { Op, fn, col, where, literal } = require('sequelize');
 
 /**
  * Get standard includes for stock queries with full associations
@@ -52,13 +52,13 @@ const getStockIncludes = () => [
       {
         model: User,
         as: 'transferrer',
-        attributes: ['id', 'username', 'firstName', 'lastName'],
+        attributes: ['id', 'fullname', 'email'],
         required: false
       },
       {
         model: User,
         as: 'receiver',
-        attributes: ['id', 'username', 'firstName', 'lastName'],
+        attributes: ['id', 'fullname', 'email'],
         required: false
       }
     ]
@@ -96,26 +96,11 @@ const getStockAggregationAttributes = () => [
   'inventory_id', 
   'unit_id',
   // Calculate total incoming stock
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      0
-    )
-  ), 'totalIncoming'],
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE 0 END)"), 'totalIncoming'],
   // Calculate total outgoing stock
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'out'), col('stockQuantity'),
-      0
-    )
-  ), 'totalOutgoing'],
+  [literal("SUM(CASE WHEN in_out = 'out' THEN stockQuantity ELSE 0 END)"), 'totalOutgoing'],
   // Calculate net available stock (incoming - outgoing)
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      fn('*', -1, col('stockQuantity'))
-    )
-  ), 'availableQuantity']
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE -stockQuantity END)"), 'availableQuantity']
 ];
 
 /**
@@ -123,12 +108,7 @@ const getStockAggregationAttributes = () => [
  * @returns {Array} Order clause for stock aggregation
  */
 const getStockAggregationOrder = () => [
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      fn('*', -1, col('stockQuantity'))
-    )
-  ), 'DESC']
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE -stockQuantity END)"), 'DESC']
 ];
 
 /**
@@ -195,13 +175,13 @@ const getStockTransferIncludes = () => [
   {
     model: User,
     as: 'transferrer',
-    attributes: ['id', 'username', 'firstName', 'lastName'],
+    attributes: ['id', 'fullname','email'],
     required: false
   },
   {
     model: User,
     as: 'receiver',
-    attributes: ['id', 'username', 'firstName', 'lastName'],
+    attributes: ['id', 'fullname', 'email'],
     required: false
   }
 ];
@@ -212,12 +192,7 @@ const getStockTransferIncludes = () => [
  * @returns {Object} Having clause for low stock queries
  */
 const buildLowStockHaving = (threshold) => {
-  return where(fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      fn('*', -1, col('stockQuantity'))
-    )
-  ), Op.lt, threshold);
+  return where(literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE -stockQuantity END)"), Op.lt, threshold);
 };
 
 /**
@@ -225,12 +200,7 @@ const buildLowStockHaving = (threshold) => {
  * @returns {Array} Order clause for low stock queries
  */
 const getLowStockOrder = () => [
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      fn('*', -1, col('stockQuantity'))
-    )
-  ), 'ASC'], 
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE -stockQuantity END)"), 'ASC'], 
   [{ model: Unit, as: 'unit' }, 'name', 'ASC']
 ];
 
@@ -241,26 +211,11 @@ const getLowStockOrder = () => [
 const getProductSummaryAttributes = () => [
   'unit_id',
   // Calculate total incoming stock
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      0
-    )
-  ), 'totalIncoming'],
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE 0 END)"), 'totalIncoming'],
   // Calculate total outgoing stock
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'out'), col('stockQuantity'),
-      0
-    )
-  ), 'totalOutgoing'],
+  [literal("SUM(CASE WHEN in_out = 'out' THEN stockQuantity ELSE 0 END)"), 'totalOutgoing'],
   // Calculate net available stock (incoming - outgoing)
-  [fn('SUM', 
-    fn('CASE', 
-      where(col('in_out'), 'in'), col('stockQuantity'),
-      fn('*', -1, col('stockQuantity'))
-    )
-  ), 'totalAvailableQuantity'],
+  [literal("SUM(CASE WHEN in_out = 'in' THEN stockQuantity ELSE -stockQuantity END)"), 'totalAvailableQuantity'],
   [fn('COUNT', col('Stock.id')), 'transactionCount']
 ];
 
