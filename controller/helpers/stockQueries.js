@@ -125,6 +125,16 @@ const getStockAggregationGroup = () => [
 ];
 
 /**
+ * Get simple stock aggregation group clause (without includes)
+ * @returns {Array} Simple group clause for stock aggregation without includes
+ */
+const getSimpleStockAggregationGroup = () => [
+  'Stock.product_id', 
+  'Stock.inventory_id', 
+  'Stock.unit_id'
+];
+
+/**
  * Get group clause for queries with full stock includes
  * @returns {Array} Group clause for full stock queries
  */
@@ -241,6 +251,7 @@ module.exports = {
   getStockAggregationAttributes,
   getStockAggregationOrder,
   getStockAggregationGroup,
+  getSimpleStockAggregationGroup,
   getFullStockGroup,
   buildTransferWhereClause,
   getStockTransferIncludes,

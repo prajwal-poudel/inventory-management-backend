@@ -28,6 +28,7 @@ const {
   getStockAggregationAttributes,
   getStockAggregationOrder,
   getStockAggregationGroup,
+  getSimpleStockAggregationGroup,
   getFullStockGroup,
   buildTransferWhereClause,
   getStockTransferIncludes,
@@ -367,7 +368,7 @@ const createStock = async (req, res) => {
       const currentStock = await Stock.findAll({
         attributes: getStockAggregationAttributes(),
         where: { product_id, inventory_id, unit_id },
-        group: getStockAggregationGroup(),
+        group: getSimpleStockAggregationGroup(),
         raw: true
       });
       
@@ -412,6 +413,7 @@ const createStock = async (req, res) => {
         stock_id: newStock.id,
         sourceInventory_id: inventory_id,
         targetInventory_id: targetInventoryId,
+        transferQuantity: stockQuantity,
         transferredBy: transferredBy || userId,
         transferDate: new Date(),
         notes
@@ -508,7 +510,7 @@ const updateStock = async (req, res) => {
           unit_id: finalUnitId,
           id: { [Op.ne]: id }
         },
-        group: getStockAggregationGroup(),
+        group: getSimpleStockAggregationGroup(),
         raw: true
       });
       
