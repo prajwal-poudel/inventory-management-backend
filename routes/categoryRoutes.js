@@ -35,12 +35,12 @@ router.get('/stats/product-count',
 // POST /api/categories - Create new category (admin only)
 router.post('/',
   // #swagger.tags = ['Categories']
-  authenticateToken, requireAdmin, createCategory);
+  authenticateToken, requireSuperAdmin, createCategory);
 
 // PUT /api/categories/:id - Update category (admin only)
 router.put('/:id',
   // #swagger.tags = ['Categories']
-  authenticateToken, requireAdmin, updateCategory);
+  authenticateToken, requireSuperAdmin, updateCategory);
 
 // Super admin only routes
 // DELETE /api/categories/:id - Delete category (super admin only)

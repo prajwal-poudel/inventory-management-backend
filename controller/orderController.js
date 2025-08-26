@@ -1,5 +1,59 @@
-const { Order, Customer, Product, Delivery, Inventory, User, Stock, ProductUnits, Unit, Driver } = require('../models');
+const { Order, Customer, Product, Delivery, Inventory, User, Stock, ProductUnits, Unit, Driver, Manages } = require('../models');
 const { Op } = require('sequelize');
+
+// Helper function to get managed inventory IDs for admin users
+const getManagedInventoryIds = async (userId, userRole) => {
+  try {
+    // Superadmin has access to all inventories
+    if (userRole === 'superadmin') {
+      return null; // null means no restriction
+    }
+    
+    // Admin users can only access inventories they manage
+    if (userRole === 'admin') {
+      const managedInventories = await Manages.findAll({
+        where: { user_id: userId },
+        attributes: ['inventory_id']
+      });
+      
+      return managedInventories.map(manage => manage.inventory_id);
+    }
+    
+    // Other roles have no access
+    return [];
+  } catch (error) {
+    console.error('Error getting managed inventory IDs:', error);
+    throw new Error('Failed to get managed inventory IDs');
+  }
+};
+
+// Helper function to validate inventory access for admin users
+const validateInventoryAccess = async (userId, userRole, inventoryId) => {
+  try {
+    // Superadmin has access to all inventories
+    if (userRole === 'superadmin') {
+      return true;
+    }
+    
+    // Admin users can only access inventories they manage
+    if (userRole === 'admin') {
+      const managesRecord = await Manages.findOne({
+        where: {
+          user_id: userId,
+          inventory_id: inventoryId
+        }
+      });
+      
+      return !!managesRecord;
+    }
+    
+    // Other roles have no access
+    return false;
+  } catch (error) {
+    console.error('Error validating inventory access:', error);
+    throw new Error('Failed to validate inventory access');
+  }
+};
 
 // Helper function to calculate available stock for a product in an inventory with specific unit
 const calculateAvailableStock = async (productId, inventoryId, unitId) => {
@@ -130,7 +184,30 @@ const getOrderIncludes = () => [
 // Get all orders
 const getAllOrders = async (req, res) => {
   try {
+    const userId = req.user.id;
+    const userRole = req.user.role;
+    
+    // Get managed inventory IDs for role-based access control
+    const managedInventoryIds = await getManagedInventoryIds(userId, userRole);
+    
+    // Build where clause based on user role
+    let whereClause = {};
+    if (managedInventoryIds !== null) {
+      // Admin users - filter by managed inventories
+      if (managedInventoryIds.length === 0) {
+        // Admin with no managed inventories - return empty result
+        return res.status(200).json({
+          success: true,
+          message: 'No orders found - you do not manage any inventories',
+          data: []
+        });
+      }
+      whereClause.inventoryId = { [Op.in]: managedInventoryIds };
+    }
+    // Superadmin - no where clause restriction (managedInventoryIds is null)
+    
     const orders = await Order.findAll({
+      where: whereClause,
       include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
@@ -154,6 +231,8 @@ const getAllOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     const order = await Order.findByPk(id, {
       include: getOrderIncludes()
@@ -163,6 +242,15 @@ const getOrderById = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
+      });
+    }
+    
+    // Validate inventory access for admin users
+    const hasAccess = await validateInventoryAccess(userId, userRole, order.inventoryId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage this inventory'
       });
     }
     
@@ -195,6 +283,15 @@ const createOrder = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Only admin and superadmin users can create orders'
+      });
+    }
+    
+    // Validate inventory access for admin users
+    const hasInventoryAccess = await validateInventoryAccess(userId, userRole, inventoryId);
+    if (!hasInventoryAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage this inventory'
       });
     }
     
@@ -441,6 +538,7 @@ const updateOrder = async (req, res) => {
     const { customerId, productId, inventoryId, quantity, unit_id, status, paymentMethod, orderDate, totalAmount } = req.body;
     
     // Get the authenticated user from the request (set by auth middleware)
+    const userId = req.user.id;
     const userRole = req.user.role;
     
     // Validate user role - only admin and superadmin can update orders
@@ -458,6 +556,26 @@ const updateOrder = async (req, res) => {
         success: false,
         message: 'Order not found'
       });
+    }
+    
+    // Validate inventory access for the existing order
+    const hasCurrentInventoryAccess = await validateInventoryAccess(userId, userRole, order.inventoryId);
+    if (!hasCurrentInventoryAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage the inventory for this order'
+      });
+    }
+    
+    // If inventoryId is being updated, validate access to the new inventory
+    if (inventoryId && inventoryId !== order.inventoryId) {
+      const hasNewInventoryAccess = await validateInventoryAccess(userId, userRole, inventoryId);
+      if (!hasNewInventoryAccess) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied - you do not manage the new inventory'
+        });
+      }
     }
     
     // Validate unit if provided
@@ -565,6 +683,8 @@ const updateOrder = async (req, res) => {
 const deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     // Check if order exists
     const order = await Order.findByPk(id);
@@ -572,6 +692,15 @@ const deleteOrder = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
+      });
+    }
+    
+    // Validate inventory access for admin users
+    const hasAccess = await validateInventoryAccess(userId, userRole, order.inventoryId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage this inventory'
       });
     }
     
@@ -596,6 +725,8 @@ const deleteOrder = async (req, res) => {
 const getOrdersByCustomer = async (req, res) => {
   try {
     const { customerId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     // Check if customer exists
     const customer = await Customer.findByPk(customerId);
@@ -606,15 +737,34 @@ const getOrdersByCustomer = async (req, res) => {
       });
     }
     
+    // Get managed inventory IDs for role-based access control
+    const managedInventoryIds = await getManagedInventoryIds(userId, userRole);
+    
+    // Build where clause based on user role
+    let whereClause = { customerId };
+    if (managedInventoryIds !== null) {
+      // Admin users - filter by managed inventories
+      if (managedInventoryIds.length === 0) {
+        // Admin with no managed inventories - return empty result
+        return res.status(200).json({
+          success: true,
+          message: 'No orders found - you do not manage any inventories',
+          data: []
+        });
+      }
+      whereClause.inventoryId = { [Op.in]: managedInventoryIds };
+    }
+    // Superadmin - no additional where clause restriction
+    
     const orders = await Order.findAll({
-      where: { customerId },
+      where: whereClause,
       include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
     
     res.status(200).json({
       success: true,
-      message: `Orders for customer '${customer.customerName}' retrieved successfully`,
+      message: `Orders for customer '${customer.fullname}' retrieved successfully`,
       data: orders
     });
   } catch (error) {
@@ -631,6 +781,8 @@ const getOrdersByCustomer = async (req, res) => {
 const getOrdersByStatus = async (req, res) => {
   try {
     const { status } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     // Validate status
     const validStatuses = ['pending', 'confirmed', 'shipped', 'delivered', 'cancelled'];
@@ -641,8 +793,27 @@ const getOrdersByStatus = async (req, res) => {
       });
     }
     
+    // Get managed inventory IDs for role-based access control
+    const managedInventoryIds = await getManagedInventoryIds(userId, userRole);
+    
+    // Build where clause based on user role
+    let whereClause = { status };
+    if (managedInventoryIds !== null) {
+      // Admin users - filter by managed inventories
+      if (managedInventoryIds.length === 0) {
+        // Admin with no managed inventories - return empty result
+        return res.status(200).json({
+          success: true,
+          message: 'No orders found - you do not manage any inventories',
+          data: []
+        });
+      }
+      whereClause.inventoryId = { [Op.in]: managedInventoryIds };
+    }
+    // Superadmin - no additional where clause restriction
+    
     const orders = await Order.findAll({
-      where: { status },
+      where: whereClause,
       include: getOrderIncludes(),
       order: [['createdAt', 'DESC']]
     });
@@ -667,6 +838,8 @@ const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     // Validate required fields
     if (!status) {
@@ -691,6 +864,15 @@ const updateOrderStatus = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Order not found'
+      });
+    }
+    
+    // Validate inventory access for admin users
+    const hasAccess = await validateInventoryAccess(userId, userRole, order.inventoryId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage this inventory'
       });
     }
     
@@ -721,6 +903,8 @@ const updateOrderStatus = async (req, res) => {
 const getOrdersByInventory = async (req, res) => {
   try {
     const { inventoryId } = req.params;
+    const userId = req.user.id;
+    const userRole = req.user.role;
     
     // Check if inventory exists
     const inventory = await Inventory.findByPk(inventoryId);
@@ -728,6 +912,15 @@ const getOrdersByInventory = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Inventory not found'
+      });
+    }
+    
+    // Validate inventory access for admin users
+    const hasAccess = await validateInventoryAccess(userId, userRole, inventoryId);
+    if (!hasAccess) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied - you do not manage this inventory'
       });
     }
     

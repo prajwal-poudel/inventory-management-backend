@@ -84,12 +84,12 @@ router.get('/category/:categoryId',
 // POST /api/products - Create new product (admin only)
 router.post('/',
   // #swagger.tags = ['Products']
-  authenticateToken, requireAdmin, createProduct);
+  authenticateToken, requireSuperAdmin, createProduct);
 
 // PUT /api/products/:id - Update product (admin only)
 router.put('/:id',
   // #swagger.tags = ['Products']
-  authenticateToken, requireAdmin, updateProduct);
+  authenticateToken, requireSuperAdmin, updateProduct);
 
 // Super admin only routes
 // DELETE /api/products/:id - Delete product (super admin only)

@@ -124,7 +124,7 @@ router.post('/',
     description: 'Access denied - Admin role required',
     schema: { $ref: '#/definitions/ErrorResponse' }
   } */
-  authenticateToken, requireAdmin, createUser);
+  authenticateToken, requireSuperAdmin, createUser);
 
 // User can view own profile, admin can view any
 // GET /api/users/:id - Get user by ID

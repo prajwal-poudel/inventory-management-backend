@@ -30,7 +30,7 @@ const getAllUsers = async (req, res) => {
             {
               model: Inventory,
               as: 'inventory',
-              attributes: ['id', 'inventoryName', 'location']
+              attributes: ['id', 'inventoryName', 'address']
             }
           ],
           required: false // Left join to include users without managed inventories
@@ -69,7 +69,7 @@ const getUserById = async (req, res) => {
             {
               model: Inventory,
               as: 'inventory',
-              attributes: ['id', 'inventoryName', 'location']
+              attributes: ['id', 'inventoryName', 'address']
             }
           ],
           required: false // Left join to include users without managed inventories
@@ -200,7 +200,7 @@ const createUser = async (req, res) => {
         userResponse.managedInventory = {
           id: inventory.id,
           inventoryName: inventory.inventoryName,
-          location: inventory.location,
+          address: inventory.address,
           managesId: managesRecord.id
         };
       }
@@ -333,7 +333,7 @@ const updateUser = async (req, res) => {
               {
                 model: Inventory,
                 as: 'inventory',
-                attributes: ['id', 'inventoryName', 'location']
+                attributes: ['id', 'inventoryName', 'address']
               }
             ],
             required: false
@@ -400,11 +400,11 @@ const getUsersByRole = async (req, res) => {
     const { role } = req.params;
     
     // Validate role
-    const validRoles = ['admin', 'superadmin', 'user'];
+    const validRoles = ['admin', 'superadmin', 'driver'];
     if (!validRoles.includes(role)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid role. Valid roles are: admin, superadmin, user'
+        message: 'Invalid role. Valid roles are: admin, superadmin, driver'
       });
     }
     
@@ -562,7 +562,7 @@ const getUsersByInventory = async (req, res) => {
             {
               model: Inventory,
               as: 'inventory',
-              attributes: ['id', 'inventoryName', 'location']
+              attributes: ['id', 'inventoryName', 'address']
             }
           ]
         }
