@@ -9,34 +9,40 @@ const {
   searchUnits
 } = require('../controller/unitController');
 
+const {
+  authenticateToken,
+  requireAdmin,
+  requireSuperAdmin
+} = require('../middleware/authMiddleware');
+
 // GET /api/units - Get all units
 router.get('/',
   // #swagger.tags = ['Units']
-  getAllUnits);
+ authenticateToken, getAllUnits);
 
 // GET /api/units/search - Search units by name
 router.get('/search',
   // #swagger.tags = ['Units']
-  searchUnits);
+authenticateToken,  searchUnits);
 
 // GET /api/units/:id - Get unit by ID
 router.get('/:id',
   // #swagger.tags = ['Units']
-  getUnitById);
+authenticateToken,  getUnitById);
 
 // POST /api/units - Create new unit
 router.post('/',
   // #swagger.tags = ['Units']
-  createUnit);
+ authenticateToken, requireSuperAdmin, createUnit);
 
 // PUT /api/units/:id - Update unit
 router.put('/:id',
   // #swagger.tags = ['Units']
-  updateUnit);
+ authenticateToken,requireSuperAdmin, updateUnit);
 
 // DELETE /api/units/:id - Delete unit
 router.delete('/:id',
   // #swagger.tags = ['Units']
-  deleteUnit);
+  authenticateToken, requireSuperAdmin, deleteUnit);
 
 module.exports = router;
