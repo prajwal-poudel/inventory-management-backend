@@ -458,6 +458,14 @@ const updateStock = async (req, res) => {
       });
     }
     
+    // Prevent updating stock records that were created via transfer method
+    if (stock.method === 'transfer') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot update stock records that were created via transfer method. Transfer-based stock records are immutable.'
+      });
+    }
+    
     // Validate inventory access for admin users
     if (userRole === 'admin') {
       const hasAccess = await validateInventoryAccess(userId, userRole, stock.inventory_id);
