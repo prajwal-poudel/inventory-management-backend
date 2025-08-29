@@ -54,6 +54,14 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('admin', 'superadmin', 'driver'),
       allowNull: false,
       defaultValue: 'driver'
+    },
+    resetPasswordToken: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    resetPasswordExpires: {
+      type: DataTypes.DATE,
+      allowNull: true
     }
   }, {
     sequelize,
