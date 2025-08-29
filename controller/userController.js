@@ -1,6 +1,8 @@
 const { User, Manages, Inventory } = require('../models');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
+const { sendPasswordResetEmail, sendPasswordResetConfirmationEmail } = require('../utils/emailService');
 
 // Helper function to generate JWT token
 const generateToken = (user) => {
@@ -638,6 +640,184 @@ const changePassword = async (req, res) => {
   }
 };
 
+// Forgot password - send reset token
+const forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    
+    // Validate required fields
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+    
+    // Find user by email
+    const user = await User.findOne({ where: { email } });
+    if (!user) {
+      // Don't reveal if email exists or not for security
+      return res.status(200).json({
+        success: true,
+        message: 'If an account with that email exists, a password reset link has been sent'
+      });
+    }
+    
+    // Generate reset token
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    
+    // Save reset token to database
+    await user.update({
+      resetPasswordToken: resetToken,
+      resetPasswordExpires: resetTokenExpiry
+    });
+    
+    // Send reset email
+    const emailResult = await sendPasswordResetEmail(user.email, resetToken, user.fullname);
+    
+    if (!emailResult.success) {
+      console.error('Failed to send password reset email:', emailResult.error);
+      // Clear the reset token if email failed
+      await user.update({
+        resetPasswordToken: null,
+        resetPasswordExpires: null
+      });
+      
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send password reset email. Please try again later.'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent'
+    });
+  } catch (error) {
+    console.error('Error in forgot password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error processing forgot password request',
+      error: error.message
+    });
+  }
+};
+
+// Reset password using token
+const resetPassword = async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+    
+    // Validate required fields
+    if (!token || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token and new password are required'
+      });
+    }
+    
+    // Validate password strength (optional - add your own rules)
+    if (newPassword.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password must be at least 6 characters long'
+      });
+    }
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          [require('sequelize').Op.gt]: new Date() // Token not expired
+        }
+      }
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+    
+    // Hash new password
+    const saltRounds = 10;
+    const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+    
+    // Update password and clear reset token
+    await user.update({
+      password: hashedPassword,
+      resetPasswordToken: null,
+      resetPasswordExpires: null
+    });
+    
+    // Send confirmation email
+    await sendPasswordResetConfirmationEmail(user.email, user.fullname);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Password has been reset successfully'
+    });
+  } catch (error) {
+    console.error('Error in reset password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error resetting password',
+      error: error.message
+    });
+  }
+};
+
+// Validate reset token (optional - to check if token is valid before showing reset form)
+const validateResetToken = async (req, res) => {
+  try {
+    const { token } = req.params;
+    
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Reset token is required'
+      });
+    }
+    
+    // Find user with valid reset token
+    const user = await User.findOne({
+      where: {
+        resetPasswordToken: token,
+        resetPasswordExpires: {
+          [require('sequelize').Op.gt]: new Date() // Token not expired
+        }
+      },
+      attributes: ['id', 'email', 'fullname'] // Only return safe fields
+    });
+    
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid or expired reset token'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      message: 'Reset token is valid',
+      data: {
+        email: user.email,
+        fullname: user.fullname
+      }
+    });
+  } catch (error) {
+    console.error('Error validating reset token:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error validating reset token',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getAllUsers,
   getUserById,
@@ -648,5 +828,8 @@ module.exports = {
   getUsersByInventory,
   loginUser,
   verifyToken,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  validateResetToken
 };

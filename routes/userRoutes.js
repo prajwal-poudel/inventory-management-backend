@@ -9,7 +9,10 @@ const {
   getUsersByRole,
   loginUser,
   verifyToken,
-  changePassword
+  changePassword,
+  forgotPassword,
+  resetPassword,
+  validateResetToken
 } = require('../controller/userController');
 
 const {
@@ -47,6 +50,106 @@ router.post('/login',
     schema: { $ref: '#/definitions/ErrorResponse' }
   } */
   loginUser);
+
+// POST /api/users/forgot-password - Request password reset
+router.post('/forgot-password', 
+  // #swagger.tags = ['Users']
+  // #swagger.summary = 'Request password reset'
+  // #swagger.description = 'Send password reset email to user'
+  /* #swagger.parameters['body'] = {
+    in: 'body',
+    description: 'User email for password reset',
+    required: true,
+    schema: { 
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          example: 'user@example.com'
+        }
+      },
+      required: ['email']
+    }
+  } */
+  /* #swagger.responses[200] = {
+    description: 'Password reset email sent (if email exists)',
+    schema: {
+      success: true,
+      message: 'If an account with that email exists, a password reset link has been sent'
+    }
+  } */
+  /* #swagger.responses[400] = {
+    description: 'Email is required',
+    schema: { $ref: '#/definitions/ErrorResponse' }
+  } */
+  forgotPassword);
+
+// POST /api/users/reset-password - Reset password with token
+router.post('/reset-password', 
+  // #swagger.tags = ['Users']
+  // #swagger.summary = 'Reset password with token'
+  // #swagger.description = 'Reset user password using reset token'
+  /* #swagger.parameters['body'] = {
+    in: 'body',
+    description: 'Reset token and new password',
+    required: true,
+    schema: { 
+      type: 'object',
+      properties: {
+        token: {
+          type: 'string',
+          example: 'abc123def456...'
+        },
+        newPassword: {
+          type: 'string',
+          minLength: 6,
+          example: 'newSecurePassword123'
+        }
+      },
+      required: ['token', 'newPassword']
+    }
+  } */
+  /* #swagger.responses[200] = {
+    description: 'Password reset successful',
+    schema: {
+      success: true,
+      message: 'Password has been reset successfully'
+    }
+  } */
+  /* #swagger.responses[400] = {
+    description: 'Invalid or expired token, or validation error',
+    schema: { $ref: '#/definitions/ErrorResponse' }
+  } */
+  resetPassword);
+
+// GET /api/users/validate-reset-token/:token - Validate reset token
+router.get('/validate-reset-token/:token', 
+  // #swagger.tags = ['Users']
+  // #swagger.summary = 'Validate password reset token'
+  // #swagger.description = 'Check if password reset token is valid and not expired'
+  /* #swagger.parameters['token'] = {
+    in: 'path',
+    description: 'Password reset token',
+    required: true,
+    type: 'string'
+  } */
+  /* #swagger.responses[200] = {
+    description: 'Token is valid',
+    schema: {
+      success: true,
+      message: 'Reset token is valid',
+      data: {
+        email: 'user@example.com',
+        fullname: 'User Name'
+      }
+    }
+  } */
+  /* #swagger.responses[400] = {
+    description: 'Invalid or expired token',
+    schema: { $ref: '#/definitions/ErrorResponse' }
+  } */
+  validateResetToken);
 
 // Protected routes (authentication required)
 // GET /api/users/verify-token - Verify JWT token
